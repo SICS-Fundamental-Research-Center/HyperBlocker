@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.15)
-project(hyper_blocker LANGUAGES CUDA)
+project(hyper_blocker LANGUAGES CXX CUDA)
 
 ###### Cmake options ######
+
+# Set Cmake Standard
+set(CMAKE_CXX_STANDARD 17)
 
 # Set default cmake type to Debug
 if (NOT CMAKE_BUILD_TYPE)
@@ -11,14 +14,17 @@ else ()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 endif ()
 
-message(STATUS "[Graph Systems] will build in type: ${CMAKE_BUILD_TYPE}")
+
+message(STATUS "[HyperBlocker] will build in type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Using compiler: ${CMAKE_CXX_COMPILER} - ${CMAKE_CXX_COMPILER_VERSION}, ${CMAKE_CUDA_COMPILER} - ${CMAKE_CUDA_COMPILER_VERSION}")
 
 ###### Directories shortcuts ######
 set(PROJECT_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(THIRD_PARTY_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_ROOT_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH  ${PROJECT_ROOT_DIR}/lib)
 set(CMAKE_MODULE_PATH ${PROJECT_ROOT_DIR}/cmake)
+set(LIBRARY_ROOT_DIR ${PROJECT_ROOT_DIR}/lib)
 
 #######################
 # Libraries
@@ -40,7 +46,6 @@ if (TEST)
     message(STATUS "Enabling GoogleTest...")
     set(BUILD_GMOCK ON CACHE BOOL "Option: build gmock and gtest -- ON" FORCE)
     set(INSTALL_GTEST OFF CACHE BOOL "Option: install gtest -- OFF" FORCE)
-
     include_directories(SYSTEM ${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
     include_directories(SYSTEM ${gmock_SOURCE_DIR}/include ${gmock_SOURCE_DIR})
     add_subdirectory("${THIRD_PARTY_ROOT}/googletest" EXCLUDE_FROM_ALL)
@@ -58,29 +63,35 @@ if (TBB_FOUND)
 endif ()
 
 # yaml
-set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
-set(YAML_CPP_INSTALL OFF)
-set(YAML_CPP_BUILD_TESTS OFF)
-set(YAML_CPP_BUILD_TOOLS OFF)
+add_subdirectory("${THIRD_PARTY_ROOT}/yaml-cpp" EXCLUDE_FROM_ALL)
 include_directories(SYSTEM ${THIRD_PARTY_ROOT}/yaml-cpp/include/)
-add_subdirectory("${THIRD_PARTY_ROOT}/yaml-cpp")
-
-# csv
-include_directories(SYSTEM ${THIRD_PARTY_ROOT}/fast-cpp-csv-parser)
 
 # rapidcsv
 include_directories(SYSTEM ${THIRD_PARTY_ROOT}/rapidcsv/src)
 
+# find CUDA
+find_package(CUDA REQUIRED)
+set(CUDA_SOURCE_PROPERTY_FORMAT OBJ)
+set(CUDA_SEPARABLE_COMPILATION ON)
+include_directories(${CUDA_INCLUDE_DIRS})
+set(CUDA_PROPAGATE_HOST_FLAGS OFF)
+set(CUDA_NVCC_FLAGS -O3;-G;-g)
+if(NOT DEFINED CMAKE_CUDA_STANDARD)
+    set(CMAKE_CUDA_STANDARD 11)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+endif()
+
+# folly
+find_package(FOLLY REQUIRED)
+include_directories(SYSTEM ${FOLLY_INCLUDE_DIR})
+
 #######################
 # Artifacts
 #######################
-include_directories(
-        ${PROJECT_ROOT_DIR}
-)
-
 add_subdirectory(core)
 #add_subdirectory(tools)
 add_subdirectory(examples)
-#include_directories(
-#        ${CMAKE_CURRENT_SOURCE_DIR}/core
-#)
+
+include_directories(
+        ${PROJECT_ROOT_DIR}
+)

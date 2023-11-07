@@ -1,10 +1,6 @@
 #ifndef HYPERBLOCKER_CORE_DEVICE_FUNC_SIM_CUH_
 #define HYPERBLOCKER_CORE_DEVICE_FUNC_SIM_CUH_
 
-namespace sics::hyper_blocker::core::gpu {
-
-namespace device {
-
 __device__ bool eq(char* attr_l, char* attr_r) {
   size_t i = 0;
   size_t len_r = 0, len_l = 0;
@@ -28,8 +24,5 @@ __device__ bool eq(char* attr_l, char* attr_r) {
     return true;
   }
 }
-
-}  // namespace sim
-}  // namespace sics::hyper_blocker::core::device_func
 
 #endif  // HYPERBLOCKER_CORE_DEVICE_FUNC_SIM_CUH_

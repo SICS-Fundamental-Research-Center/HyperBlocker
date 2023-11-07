@@ -6,11 +6,8 @@ project(hyper_blocker)
 #######################
 include_directories(
         ${PROJECT_ROOT_DIR}/core
+        ${PROJECT_ROOT_DIR}/
 )
-
-# find gflag
-find_package(gflags REQUIRED)
-
 
 #######################
 # Artifacts
@@ -19,11 +16,12 @@ file(GLOB appfiles "${CMAKE_CURRENT_SOURCE_DIR}/*.cu")
 foreach (appfile ${appfiles})
     message(STATUS "Found apps: ${appfile}")
     get_filename_component(app ${appfile} NAME_WE)
-    add_executable("${app}_exec" ${appfile})
+    cuda_add_executable("${app}_exec" ${appfile})
     target_link_libraries(
             "${app}_exec"
             yaml-cpp
             gflags
             stdc++fs
-            )
+            hyper_blocker
+    )
 endforeach ()

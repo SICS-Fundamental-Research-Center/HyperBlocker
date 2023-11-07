@@ -1,23 +1,22 @@
-#ifndef SICS_GRAPH_SYSTEMS_TOOLS_COMMON_YAML_CONFIG_CUH_
-#define SICS_GRAPH_SYSTEMS_TOOLS_COMMON_YAML_CONFIG_CUH_
+#ifndef SICS_GRAPH_SYSTEMS_TOOLS_COMMON_YAML_CONFIG_H_
+#define SICS_GRAPH_SYSTEMS_TOOLS_COMMON_YAML_CONFIG_H_
 
 #include <yaml-cpp/yaml.h>
 
-#include "data_structures/rule.cuh"
+#include "data_structures/rule.h"
 
 namespace YAML {
 
-using sics::hyper_blocker::core::data_structures::Rule;
+using sics::hyperblocker::core::data_structures::Rule;
 
-template <>
-struct convert<Rule> {
-  static Node encode(const Rule& rule) {
+template <> struct convert<Rule> {
+  static Node encode(const Rule &rule) {
     Node node;
     // TODO (hsiaoko): to add encode function.
     return node;
   }
 
-  static bool decode(const Node& node, Rule& rule) {
+  static bool decode(const Node &node, Rule &rule) {
     if (node.size() < 2) {
       std::cout << "Invalid rule's metadata format" << std::endl;
       return false;
@@ -45,8 +44,10 @@ struct convert<Rule> {
 
       auto threshold =
           node["Preconditions"]["Threshold"][0].as<std::vector<std::string>>();
-      for (size_t i = 0; i < threshold.size(); i++)
-        rule.pre.threshold.emplace_back(std::stof(threshold[i]));
+      for (size_t i = 2; i < threshold.size(); i++) {
+        rule.pre.threshold.insert(std::make_pair(rule.pre.sim[2 + (i - 2) * 2],
+                                                 std::stof(threshold[i])));
+      }
 
       auto equality = node["Conseq"]["Equality"].as<std::vector<std::string>>();
       for (size_t i = 0; i < equality.size(); i++)
@@ -56,5 +57,5 @@ struct convert<Rule> {
   }
 };
 
-}  // namespace YAML
-#endif  // SICS_GRAPH_SYSTEMS_TOOLS_COMMON_YAML_CONFIG_CUH_
+} // namespace YAML
+#endif // SICS_GRAPH_SYSTEMS_TOOLS_COMMON_YAML_CONFIG_H_

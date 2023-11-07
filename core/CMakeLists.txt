@@ -2,7 +2,7 @@ project(hyper_blocker)
 
 # Directories
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_ROOT_DIR}/bin)
-set(LIBRARY_OUTPUT_PATH ${PROJECT_ROOT_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_ROOT_DIR}/lib)
 
 #######################
 # Libraries
@@ -20,6 +20,7 @@ file(GLOB CORE_SOURCES
         "*.cu"
         "components/*.cu"
         "components/*.cpp"
+        "components/scheduler/*.cpp"
         "data_structures/*.cu"
         "data_structures/*.cpp"
         "util/*.cu"
@@ -27,15 +28,15 @@ file(GLOB CORE_SOURCES
         "gpu/*.cpp"
         "gpu/*.cu"
         )
-
-list(FILTER GRAPH_CORE_SOURCES EXCLUDE REGEX ".*_test\\.cpp$")
-message(STATUS "CORE source files: ${CORE_SOURCES}")
+list(FILTER CORE_SOURCES EXCLUDE REGEX ".*_test\\.cpp$")
 
 file(GLOB CORE_HEADERS
         "*.h"
         "*.cuh"
         "components/*.h"
         "components/*.cuh"
+        "components/scheduler/*.h"
+        "components/scheduler/*.cuh"
         "data_structures/*.h"
         "data_structures/*.cuh"
         "util/*.h"

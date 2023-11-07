@@ -5,8 +5,6 @@
 #include <cstdint>
 #include <cstring>
 
-namespace sics::hyper_blocker::core::util {
-
 #define WORD_OFFSET(i) (i >> 6)
 #define BIT_OFFSET(i) (i & 0x3f)
 
@@ -149,7 +147,5 @@ class Bitmap {
   size_t size_ = 0;
   uint64_t* data_ = nullptr;
 };
-
-}  // namespace sics::hyper_blocker::core::util
 
 #endif  // CORE_UTIL_BITMAP_H_
