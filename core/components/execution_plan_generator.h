@@ -15,23 +15,17 @@ namespace components {
 
 using sics::hyperblocker::core::data_structures::Rule;
 
-struct SerializedExecutionPlan {
-  int n_rules = 0;
-  int length = 0;
-  int *pred_index;
-  char *pred_type;
-  float *pred_threshold;
-
-  ~SerializedExecutionPlan() {
-    delete[] pred_index;
-    delete[] pred_type;
-    delete[] pred_threshold;
-  }
-};
-
 enum EPGStrategy {
   kEqualitiesFirst, // default
   kSimFirst
+};
+
+struct SerializedExecutionPlan {
+  int *n_rules;
+  int *length;
+  int *pred_index;
+  char *pred_type;
+  float *pred_threshold;
 };
 
 class ExecutionPlanGenerator {
@@ -53,6 +47,10 @@ public:
   SerializedExecutionPlan
   GetExecutionPlan(EPGStrategy strategy = kEqualitiesFirst) {
     SerializedExecutionPlan ep;
+    ep.n_rules = new int();
+    ep.length = new int();
+    *ep.n_rules = rule_vec_.size();
+
     switch (strategy) {
       // CASE 1: Equalities first
     case kEqualitiesFirst: {
@@ -75,15 +73,6 @@ public:
       serialized_pred_type_vec.reserve(max_pred_index);
       serialized_pred_threshold_vec.reserve(max_pred_index);
 
-      for (size_t i = 0; i < rule_vec_.size(); i++) {
-        Bitmap visited(max_pred_index);
-        ep.length += rule_vec_[i].pre.eq.size() + rule_vec_[i].pre.sim.size();
-      }
-
-      ep.length += rule_vec_.size();
-
-      // DFS traversal preconditions to get the serialized execution plan
-      // visited.Clear();
       for (size_t i = 0; i < rule_vec_.size(); i++) {
         Bitmap visited(max_pred_index);
         std::for_each(
@@ -113,7 +102,7 @@ public:
 
         serialized_pred_index_vec.push_back(CHECK_POINT);
         serialized_pred_type_vec.push_back(CHECK_POINT_CHAR);
-        serialized_pred_threshold_vec.push_back(CHECK_POINT_CHAR);
+        serialized_pred_threshold_vec.push_back(1);
       }
 
       ep.pred_index = new int[serialized_pred_index_vec.size()]();
@@ -124,6 +113,7 @@ public:
         ep.pred_type[i] = serialized_pred_type_vec[i];
         ep.pred_threshold[i] = serialized_pred_threshold_vec[i];
       }
+      *ep.length = serialized_pred_index_vec.size();
       break;
     }
     case kSimFirst:

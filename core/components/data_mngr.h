@@ -15,8 +15,8 @@ namespace hyperblocker {
 namespace core {
 namespace components {
 
-using sics::hyperblocker::core::data_structures::SerializedTable;
 using sics::hyperblocker::core::data_structures::SerializableTable;
+using sics::hyperblocker::core::data_structures::SerializedTable;
 
 class DataMngr {
 public:
@@ -95,7 +95,7 @@ public:
       // Perform data partitioning.
       std::for_each(ivec.begin(), ivec.end(), [&](auto &i) {
         auto bucket_id = 0;
-        for (size_t j = 0; j < serialized_ep.length && j < MAX_HASH_TIMES;
+        for (size_t j = 0; j < *(serialized_ep.length) && j < MAX_HASH_TIMES;
              j++) {
           if (serialized_ep.pred_type[j] == EQUALITIES) {
             auto pred_index = serialized_ep.pred_index[j];
@@ -144,7 +144,7 @@ public:
       // Perform data partitioning for table 1.
       std::for_each(ivec_l.begin(), ivec_l.end(), [&](auto &i) {
         auto bucket_id = 0;
-        for (size_t j = 0; j < serialized_ep.length && j < MAX_HASH_TIMES;
+        for (size_t j = 0; j < *(serialized_ep.length) && j < MAX_HASH_TIMES;
              j++) {
           if (serialized_ep.pred_type[j] == EQUALITIES) {
             auto pred_index = serialized_ep.pred_index[j];
@@ -161,7 +161,7 @@ public:
       // Perform data partitioning for table 2.
       std::for_each(ivec_r.begin(), ivec_r.end(), [&](auto &i) {
         auto bucket_id = 0;
-        for (size_t j = 0; j < serialized_ep.length && j < MAX_HASH_TIMES;
+        for (size_t j = 0; j < *(serialized_ep.length) && j < MAX_HASH_TIMES;
              j++) {
           if (serialized_ep.pred_type[j] == EQUALITIES) {
             auto pred_index = serialized_ep.pred_index[j];

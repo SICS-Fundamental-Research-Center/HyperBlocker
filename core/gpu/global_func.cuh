@@ -1,24 +1,113 @@
 #ifndef HYPERBLOCKER_CORE_GPU_GLOBAL_FUNC_CUH_
 #define HYPERBLOCKER_CORE_GPU_GLOBAL_FUNC_CUH_
 
-__global__ void Blocking(char* d_tb_data_l, char* d_tb_data_r, size_t* d_col_size,
-                       size_t* d_col_offset, size_t* d_candidate) {
-  size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-  size_t num_blocks = gridDim.x * blockDim.x;
-  d_candidate[0] = 9;
-  d_candidate[1] = 10;
-  d_candidate[3] = 23;
-  d_candidate[4] = 23;
-  d_candidate[5] = 23;
-  d_candidate[6] = 23;
-  // for (size_t i = tid; i < *d_tb_size; i += num_blocks) {
-  //   d_tb_data[i] = 0;
-  // }
-  //*d_tb_offset = tid;
+#include "core/components/execution_plan_generator.h"
+#include "core/gpu/device_func.cuh"
+#include "core/gpu/kernel_data_structures/kernel_bitmap.cuh"
+
+namespace sics {
+namespace hyperblocker {
+namespace core {
+namespace gpu {
+
+using sics::hyperblocker::core::components::SerializedExecutionPlan;
+using sics::hyperblocker::core::gpu::KernelBitmap;
+
+__device__ bool test1() { return false; }
+
+__global__ void
+blocking_kernel(size_t n_rows_l, size_t n_rows_r, size_t aligned_tuple_size_l,
+                size_t aligned_tuple_size_r, const char *d_tb_data_l,
+                const char *d_tb_data_r, const size_t *d_col_size_l,
+                const size_t *d_col_size_r, const size_t *d_col_offset_l,
+                const size_t *d_col_offset_r, SerializedExecutionPlan d_sep,
+                int *d_candidate, int *result_offset, char *d_test_char,
+                float *d_test_float) {
+  // Compute tid.
+  unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  unsigned int step = blockDim.x;
+
+  // extern __shared__ size_t shared_output_buffer[];
+
+  // extern __shared__ bool to_skip[];
+  for (int i = 0; i < *(d_sep.length); i++) {
+    d_test_char[i] = d_sep.pred_type[i];
+  }
+
+  size_t row_index_l = tid;
+  while (row_index_l < n_rows_l) {
+
+    for (int row_index_r = 0; row_index_r < n_rows_r; row_index_r++) {
+
+      bool is_match = false;
+
+      for (int i = 0; i < *(d_sep.length); i++) {
+        bool to_skip = false;
+
+        switch (d_sep.pred_type[i]) {
+        case EQUALITIES:
+          if (!equalities_kernel(
+                  d_tb_data_l + row_index_l * aligned_tuple_size_l +
+                      d_col_offset_l[i],
+                  d_tb_data_r + row_index_r * aligned_tuple_size_r +
+                      d_col_offset_r[i],
+                  d_col_size_l[i], d_col_size_r[i])) {
+            to_skip = true;
+          }
+          break;
+        case SIM:
+          if (jaccard_kernel(d_tb_data_l + row_index_l * aligned_tuple_size_l +
+                                 d_col_offset_l[i],
+                             d_tb_data_r + row_index_r * aligned_tuple_size_r +
+                                 d_col_offset_r[i]) < d_sep.pred_threshold[i]) {
+            to_skip = true;
+          }
+          break;
+        }
+
+        // Move to the next check point. the next round to computation start
+        // at check point +1;
+        if (to_skip) {
+          while (d_sep.pred_index[i] != CHECK_POINT && i < *(d_sep.length))
+            i++;
+
+        } else {
+          // two tuple is a match, break the loop.
+          if (i < *(d_sep.length) && d_sep.pred_index[i] == CHECK_POINT) {
+            is_match = true;
+            break;
+          }
+        }
+      }
+
+      // TODO: is a match then output the result.
+      if (is_match) {
+        if (row_index_l == row_index_r)
+          continue;
+        int local_offset = atomicAdd(result_offset, 1);
+        d_candidate[2 * local_offset] = row_index_l;
+        d_candidate[2 * local_offset + 1] = row_index_r;
+        memcpy(d_test_char + local_offset * (d_col_size_l[0] + d_col_size_r[0]),
+               d_tb_data_l + row_index_l * aligned_tuple_size_l,
+               d_col_size_l[0]);
+        memcpy(
+            d_test_char + local_offset * (d_col_size_l[0] + d_col_size_r[0]) +
+                d_col_size_l[0],
+            d_tb_data_r + row_index_r * aligned_tuple_size_r, d_col_size_r[0]);
+
+        //   TODO: tuple pair is matched, output index.
+      }
+    }
+    row_index_l += step;
+  }
 }
 
 __global__ void AplusB(int *ret, int a, int b) {
   ret[threadIdx.x] = a + b + threadIdx.x;
 }
 
-#endif  // HYPERBLOCKER_CORE_GPU_GLOBAL_FUNC_CUH_
+} // namespace gpu
+} // namespace core
+} // namespace hyperblocker
+} // namespace sics
+#endif // HYPERBLOCKER_CORE_GPU_GLOBAL_FUNC_CUH_

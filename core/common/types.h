@@ -6,7 +6,7 @@
 #define EQUALITIES 'e'
 #define SIM 's'
 
-#define MAX_CANDIDATE_COUNT 1024
+#define MAX_CANDIDATE_COUNT 65536
 
 #define CHECK_POINT INT_MAX
 #define CHECK_POINT_CHAR ' '

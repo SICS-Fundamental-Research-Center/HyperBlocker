@@ -14,17 +14,20 @@ namespace data_structures {
 
 class SerializedTable {
 public:
-  void Show() {
+  void Show() const {
     std::cout << "ShowTable: " << std::endl;
     for (size_t j = 0; j < n_rows_; j++) {
       for (size_t i = 0; i < n_cols_; i++) {
-        std::cout << (data_ + aligned_tuple_size_ * j + col_offset_[i]) << " ";
+        std::cout << (data_ + aligned_tuple_size_ * j + col_offset_[i]) << "|";
       }
       std::cout << std::endl;
     }
   }
 
   char *get_data_base_ptr() const { return data_; }
+  size_t *get_col_size_base_ptr() const { return col_size_; }
+  size_t *get_col_offset_base_ptr() const { return col_offset_; }
+
   size_t get_aligned_tuple_size() const { return aligned_tuple_size_; }
   size_t get_n_rows() const { return n_rows_; }
   size_t get_n_cols() const { return n_cols_; }
