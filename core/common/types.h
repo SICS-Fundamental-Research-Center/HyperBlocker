@@ -7,6 +7,8 @@
 #define SIM 's'
 
 #define MAX_CANDIDATE_COUNT 65536
+#define MAX_EID_COL_SIZE 64
+
 
 #define CHECK_POINT INT_MAX
 #define CHECK_POINT_CHAR ' '

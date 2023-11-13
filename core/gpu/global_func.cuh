@@ -21,18 +21,14 @@ blocking_kernel(size_t n_rows_l, size_t n_rows_r, size_t aligned_tuple_size_l,
                 const char *d_tb_data_r, const size_t *d_col_size_l,
                 const size_t *d_col_size_r, const size_t *d_col_offset_l,
                 const size_t *d_col_offset_r, SerializedExecutionPlan d_sep,
-                int *d_candidate, int *result_offset, char *d_test_char,
+                int *d_candidate, int *result_offset, char *d_candidate_char,
                 float *d_test_float) {
   // Compute tid.
   unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
   unsigned int step = blockDim.x;
 
   // extern __shared__ size_t shared_output_buffer[];
-
   // extern __shared__ bool to_skip[];
-  for (int i = 0; i < *(d_sep.length); i++) {
-    d_test_char[i] = d_sep.pred_type[i];
-  }
 
   size_t row_index_l = tid;
   while (row_index_l < n_rows_l) {
@@ -71,7 +67,6 @@ blocking_kernel(size_t n_rows_l, size_t n_rows_r, size_t aligned_tuple_size_l,
         if (to_skip) {
           while (d_sep.pred_index[i] != CHECK_POINT && i < *(d_sep.length))
             i++;
-
         } else {
           // two tuple is a match, break the loop.
           if (i < *(d_sep.length) && d_sep.pred_index[i + 1] == CHECK_POINT) {
@@ -88,8 +83,13 @@ blocking_kernel(size_t n_rows_l, size_t n_rows_r, size_t aligned_tuple_size_l,
         int local_offset = atomicAdd(result_offset, 1);
         if (local_offset > MAX_CANDIDATE_COUNT)
           continue;
-        d_candidate[2 * local_offset] = row_index_l;
-        d_candidate[2 * local_offset + 1] = row_index_r;
+        memcpy(d_candidate_char + 2 * MAX_EID_COL_SIZE * local_offset,
+               d_tb_data_l + aligned_tuple_size_l * row_index_l,
+               sizeof(char) * d_col_size_l[0]);
+        memcpy(d_candidate_char + 2 * MAX_EID_COL_SIZE * local_offset +
+                   MAX_EID_COL_SIZE,
+               d_tb_data_r + aligned_tuple_size_r * row_index_r,
+               sizeof(char) * d_col_size_r[0]);
       }
     }
     row_index_l += step;

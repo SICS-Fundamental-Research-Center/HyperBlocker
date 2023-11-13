@@ -80,7 +80,7 @@ public:
                             const SerializedExecutionPlan &h_sep, int ball_id,
                             int bin_id, cudaStream_t *p_stream) {
     dim3 dimBlock(32);
-    dim3 dimGrid(256);
+    dim3 dimGrid(128);
 
     // h_tb_l.Show();
     // h_tb_r.Show();
@@ -165,19 +165,11 @@ public:
         cudaHostAlloc(&h_candidates, MAX_CANDIDATE_COUNT * 2 * sizeof(int),
                       cudaHostAllocPortable);
 
-    size_t shared_memory_size = 1024;
-    // MAX_CANDIDATE_COUNT * 2 * sizeof(size_t);
-
-    char *d_test_char, *h_test_char;
-    cudaMalloc((void **)&d_test_char, MAX_CANDIDATE_COUNT *
-                                          (h_tb_l.get_col_size_base_ptr()[0] +
-                                           h_tb_r.get_col_size_base_ptr()[0]) *
-                                          sizeof(char));
-    cudaHostAlloc(&h_test_char,
-                  MAX_CANDIDATE_COUNT *
-                      (h_tb_l.get_col_size_base_ptr()[0] +
-                       h_tb_r.get_col_size_base_ptr()[0]) *
-                      sizeof(char),
+    char *d_candidates_char, *h_candidates_char;
+    cudaMalloc((void **)&d_candidates_char,
+               MAX_CANDIDATE_COUNT * MAX_EID_COL_SIZE * 2 * sizeof(char));
+    cudaHostAlloc(&h_candidates_char,
+                  MAX_CANDIDATE_COUNT * MAX_EID_COL_SIZE * 2 * sizeof(char),
                   cudaHostAllocPortable);
 
     float *d_test_float, *h_test_float;
@@ -189,22 +181,19 @@ public:
         h_tb_l.get_n_rows(), h_tb_r.get_n_rows(),
         h_tb_l.get_aligned_tuple_size(), h_tb_r.get_aligned_tuple_size(),
         d_tb_data_l, d_tb_data_r, d_col_size_l, d_col_size_r, d_col_offset_l,
-        d_col_offset_r, d_sep, d_candidates, d_result_offset, d_test_char,
+        d_col_offset_r, d_sep, d_candidates, d_result_offset, d_candidates_char,
         d_test_float);
 
-    // if (err == cudaSuccess) {
+    cudaMemcpyAsync(h_result_offset, d_result_offset, sizeof(int),
+                    cudaMemcpyDeviceToHost, *p_stream);
     cudaMemcpyAsync(h_candidates, d_candidates,
-                    MAX_CANDIDATE_COUNT * 2 * sizeof(size_t),
+                    MAX_CANDIDATE_COUNT * 2 * sizeof(int),
+                    cudaMemcpyDeviceToHost, *p_stream);
+    cudaMemcpyAsync(h_candidates_char, d_candidates_char,
+                    MAX_CANDIDATE_COUNT * MAX_EID_COL_SIZE * 2 * sizeof(char),
                     cudaMemcpyDeviceToHost, *p_stream);
 
-    cudaMemcpyAsync(h_result_offset, d_result_offset, sizeof(int),
-                    cudaMemcpyDefault, *p_stream);
-    cudaMemcpyAsync(h_candidates, d_candidates,
-                    MAX_CANDIDATE_COUNT * 2 * sizeof(int), cudaMemcpyDefault,
-                    *p_stream);
-
-    p_match_->Append(ball_id, h_result_offset, h_candidates);
-
+    p_match_->Append(ball_id, h_result_offset, h_candidates_char);
 
     // cudaFreeHost(d_candidates);
     // cudaFreeHost(d_tb_data_l);
@@ -213,9 +202,9 @@ public:
     // cudaFree(d_col_size_r);
     // cudaFree(d_col_offset_l);
     // cudaFree(d_col_offset_r);
-    //  cudaFree(d_sep->pred_index);
-    //  cudaFree(d_sep->pred_type);
-    //  cudaFree(d_sep->pred_threshold);
+    // cudaFree(d_sep->pred_index);
+    // cudaFree(d_sep->pred_type);
+    // cudaFree(d_sep->pred_threshold);
     std::cout << "AsyncSubmit finished." << std::endl;
   }
 

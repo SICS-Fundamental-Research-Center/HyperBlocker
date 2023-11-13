@@ -64,6 +64,18 @@ private:
     out.close();
   }
 
+  void WriteMatch(int n_candidates, char *candidates) {
+    std::ofstream out;
+
+    out.open(output_path_, std::ios::app);
+    for (int i = 0; i < n_candidates; i++) {
+      out << candidates + MAX_EID_COL_SIZE * 2 * i << ","
+          << candidates + MAX_EID_COL_SIZE * 2 * i + MAX_EID_COL_SIZE
+          << std::endl;
+    }
+    out.close();
+  }
+
   const std::string output_path_;
   int n_device_ = 0;
 

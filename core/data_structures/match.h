@@ -13,9 +13,19 @@ class Match {
 public:
   Match() { p_mtx_ = new std::mutex(); }
 
+  void SetColSize(int  col_size_l, int col_size_r){
+    col_size_l_ = col_size_l;
+    col_size_r_ = col_size_r;
+  }
+
   void Append(int ball_id, int *p_n_candidates, int *p_candidates) {
     const std::lock_guard<std::mutex> lock(*p_mtx_);
     candidates_map_.insert(std::make_pair(ball_id, p_candidates));
+    n_candidates_map_.insert(std::make_pair(ball_id, p_n_candidates));
+  }
+  void Append(int ball_id, int *p_n_candidates, char *p_candidates_char) {
+    const std::lock_guard<std::mutex> lock(*p_mtx_);
+    candidates_char_map_.insert(std::make_pair(ball_id, p_candidates_char));
     n_candidates_map_.insert(std::make_pair(ball_id, p_n_candidates));
   }
 
@@ -29,10 +39,20 @@ public:
     }
   }
 
-  int *GetCandidatesBasePtr(int ball_id) {
+  // int *GetCandidatesBasePtr(int ball_id) {
+  //   const std::lock_guard<std::mutex> lock(*p_mtx_);
+  //   auto iter = candidates_map_.find(ball_id);
+  //   if (iter != candidates_map_.end()) {
+  //     return iter->second;
+  //   } else {
+  //     return nullptr;
+  //   }
+  // }
+
+  char *GetCandidatesBasePtr(int ball_id) {
     const std::lock_guard<std::mutex> lock(*p_mtx_);
-    auto iter = candidates_map_.find(ball_id);
-    if (iter != candidates_map_.end()) {
+    auto iter = candidates_char_map_.find(ball_id);
+    if (iter != candidates_char_map_.end()) {
       return iter->second;
     } else {
       return nullptr;
@@ -40,9 +60,12 @@ public:
   }
 
 private:
+  int col_size_l_ = 64;
+  int col_size_r_ = 64;
   std::mutex *p_mtx_;
   std::unordered_map<int, int *> n_candidates_map_;
   std::unordered_map<int, int *> candidates_map_;
+  std::unordered_map<int, char *> candidates_char_map_;
 };
 
 } // namespace data_structures
