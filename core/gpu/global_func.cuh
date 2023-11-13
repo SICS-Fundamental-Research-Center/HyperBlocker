@@ -44,13 +44,14 @@ blocking_kernel(size_t n_rows_l, size_t n_rows_r, size_t aligned_tuple_size_l,
       for (int i = 0; i < *(d_sep.length); i++) {
         bool to_skip = false;
 
+        int pred_index = d_sep.pred_index[i];
         switch (d_sep.pred_type[i]) {
         case EQUALITIES:
           if (!equalities_kernel(
                   d_tb_data_l + row_index_l * aligned_tuple_size_l +
-                      d_col_offset_l[i],
+                      d_col_offset_l[pred_index],
                   d_tb_data_r + row_index_r * aligned_tuple_size_r +
-                      d_col_offset_r[i],
+                      d_col_offset_r[pred_index],
                   d_col_size_l[i], d_col_size_r[i])) {
             to_skip = true;
           }
@@ -73,7 +74,7 @@ blocking_kernel(size_t n_rows_l, size_t n_rows_r, size_t aligned_tuple_size_l,
 
         } else {
           // two tuple is a match, break the loop.
-          if (i < *(d_sep.length) && d_sep.pred_index[i] == CHECK_POINT) {
+          if (i < *(d_sep.length) && d_sep.pred_index[i + 1] == CHECK_POINT) {
             is_match = true;
             break;
           }
@@ -82,20 +83,13 @@ blocking_kernel(size_t n_rows_l, size_t n_rows_r, size_t aligned_tuple_size_l,
 
       // TODO: is a match then output the result.
       if (is_match) {
-        if (row_index_l == row_index_r)
-          continue;
+        // if (row_index_l == row_index_r)
+        //   continue;
         int local_offset = atomicAdd(result_offset, 1);
+        if (local_offset > MAX_CANDIDATE_COUNT)
+          continue;
         d_candidate[2 * local_offset] = row_index_l;
         d_candidate[2 * local_offset + 1] = row_index_r;
-        memcpy(d_test_char + local_offset * (d_col_size_l[0] + d_col_size_r[0]),
-               d_tb_data_l + row_index_l * aligned_tuple_size_l,
-               d_col_size_l[0]);
-        memcpy(
-            d_test_char + local_offset * (d_col_size_l[0] + d_col_size_r[0]) +
-                d_col_size_l[0],
-            d_tb_data_r + row_index_r * aligned_tuple_size_r, d_col_size_r[0]);
-
-        //   TODO: tuple pair is matched, output index.
       }
     }
     row_index_l += step;

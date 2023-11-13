@@ -14,9 +14,10 @@ namespace data_structures {
 
 class SerializedTable {
 public:
-  void Show() const {
+  void Show(size_t n_rows = 3) const {
     std::cout << "ShowTable: " << std::endl;
-    for (size_t j = 0; j < n_rows_; j++) {
+    n_rows = n_rows < n_rows_ ? n_rows : n_rows_;
+    for (size_t j = 0; j < n_rows; j++) {
       for (size_t i = 0; i < n_cols_; i++) {
         std::cout << (data_ + aligned_tuple_size_ * j + col_offset_[i]) << "|";
       }
@@ -27,6 +28,10 @@ public:
   char *get_data_base_ptr() const { return data_; }
   size_t *get_col_size_base_ptr() const { return col_size_; }
   size_t *get_col_offset_base_ptr() const { return col_offset_; }
+
+  char *get_term_ptr(size_t col, size_t row) const {
+    return data_ + aligned_tuple_size_ * row + col_offset_[col];
+  }
 
   size_t get_aligned_tuple_size() const { return aligned_tuple_size_; }
   size_t get_n_rows() const { return n_rows_; }

@@ -158,6 +158,7 @@ public:
         }
       });
 
+      std::cout<<"x1x"<<std::endl;
       // Perform data partitioning for table 2.
       std::for_each(ivec_r.begin(), ivec_r.end(), [&](auto &i) {
         auto bucket_id = 0;

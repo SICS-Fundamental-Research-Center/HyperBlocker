@@ -25,31 +25,6 @@ __host__ bool equalities(const char *term_l, const char *term_r, size_t len_l,
   return true;
 }
 
-__host__ float Jaccard(const char *term_l, const char *term_r, size_t len_l,
-                       size_t len_r) {
-
-  size_t len = 256;
-  // len_l < len_r ? len_r : len_l;
-  uint8_t bm_l[len] = {0};
-  uint8_t bm_r[len] = {0};
-
-  int i;
-  for (i = 0; term_l[i]; i++)
-    bm_l[term_l[i]] = 1;
-  for (i = 0; term_r[i]; i++)
-    bm_r[term_r[i]] = 1;
-
-  int in = 0;
-  int un = 0;
-
-  for (i = 0; i < len; i++) {
-    in += bm_l[i] && bm_r[i];
-    un += bm_l[i] || bm_r[i];
-  }
-
-  return (float)in / (float)un;
-}
-
 __host__ float jaro(const char *term_l, const char *term_r, size_t len_l,
                     size_t len_r) {
   std::cout << term_l << std::endl;
@@ -200,20 +175,29 @@ __device__ float lev_jaro_ratio(size_t len_l, const char *term_l, size_t len_r,
 
 __device__ float jaccard_kernel(const char *term_l, const char *term_r) {
 
-  // len_l < len_r ? len_r : len_l;
-  uint8_t bm_l[256] = {0};
-  uint8_t bm_r[256] = {0};
+  char c_diff = 'a' - 'A';
 
-  KernelBitmap kbm_l(256);
-  KernelBitmap kbm_r(256);
+  bool bm_l[256];
+  bool bm_r[256];
+  for (int i = 0; term_l[i]; i++) {
+    int val = term_l[i];
+    if (term_l[i] - 'Z' <= 0)
+      val += c_diff;
+    bm_l[val] = true;
+  }
+  for (int i = 0; term_r[i]; i++) {
+    int val = term_r[i];
+    if (term_r[i] - 'Z' <= 0)
+      val += c_diff;
+    bm_r[val] = true;
+  }
+  int count_l = 0, count_r = 0;
+  for (int i = 0; i < 256; i++) {
+    count_l += bm_l[i];
+    count_r += bm_r[i];
+  }
 
-  int i;
-  for (i = 0; term_l[i]; i++)
-    kbm_l.SetBit(term_l[i]);
-  for (i = 0; term_r[i]; i++)
-    kbm_r.SetBit(term_r[i]);
-
-  return (float)kbm_l.Count() / (float)kbm_r.Count();
+  return (float)count_l / (float)count_r;
 }
 
 } // namespace gpu

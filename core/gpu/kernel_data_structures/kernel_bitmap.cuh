@@ -18,12 +18,12 @@ __device__ class KernelBitmap {
 public:
   __device__ KernelBitmap(size_t size) : size_(size) { Init(size); }
 
-  __device__ ~KernelBitmap() { free(data_); }
+  __device__ ~KernelBitmap() { delete[] data_; }
 
   __device__ void Init(size_t size) {
     free(data_);
     size_ = size;
-    data_ = (uint64_t *)malloc(sizeof(uint64_t) * WORD_OFFSET(size_) + 1);
+    data_ = new uint64_t[WORD_OFFSET(size_) + 1];
   }
 
   __device__ void Clear() {
@@ -58,16 +58,19 @@ public:
 
   __device__ size_t Count() const {
     size_t count = 0;
-    for (size_t i = 0; i <= WORD_OFFSET(size_); i++) {
-      auto x = data_[i];
-      x = (x & (0x5555555555555555)) + ((x >> 1) & (0x5555555555555555));
-      x = (x & (0x3333333333333333)) + ((x >> 2) & (0x3333333333333333));
-      x = (x & (0x0f0f0f0f0f0f0f0f)) + ((x >> 4) & (0x0f0f0f0f0f0f0f0f));
-      x = (x & (0x00ff00ff00ff00ff)) + ((x >> 8) & (0x00ff00ff00ff00ff));
-      x = (x & (0x0000ffff0000ffff)) + ((x >> 16) & (0x0000ffff0000ffff));
-      x = (x & (0x00000000ffffffff)) + ((x >> 32) & (0x00000000ffffffff));
-      count += (size_t)x;
+    for (size_t i = 0; i <= size_; i++) {
+      if(GetBit(i)) count++;
     }
+    //for (size_t i = 0; i <= WORD_OFFSET(size_); i++) {
+    //  auto x = data_[i];
+    //  x = (x & (0x5555555555555555)) + ((x >> 1) & (0x5555555555555555));
+    //  x = (x & (0x3333333333333333)) + ((x >> 2) & (0x3333333333333333));
+    //  x = (x & (0x0f0f0f0f0f0f0f0f)) + ((x >> 4) & (0x0f0f0f0f0f0f0f0f));
+    //  x = (x & (0x00ff00ff00ff00ff)) + ((x >> 8) & (0x00ff00ff00ff00ff));
+    //  x = (x & (0x0000ffff0000ffff)) + ((x >> 16) & (0x0000ffff0000ffff));
+    //  x = (x & (0x00000000ffffffff)) + ((x >> 32) & (0x00000000ffffffff));
+    //  count += (size_t)x;
+    //}
     return count;
   };
 
