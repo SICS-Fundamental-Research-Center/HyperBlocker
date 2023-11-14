@@ -54,12 +54,7 @@ public:
       : cols_(cols) {
     n_cols_ = cols.size();
     n_rows_ = cols[0].size();
-  }
-
-  SerializableTable(const std::vector<std::vector<std::string>> &&cols)
-      : cols_(cols) {
-    n_cols_ = cols.size();
-    n_rows_ = cols[0].size();
+    Serialize();
   }
 
   void Serialize() {

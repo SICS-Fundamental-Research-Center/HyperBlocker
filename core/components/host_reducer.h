@@ -68,7 +68,7 @@ private:
     std::ofstream out;
 
     out.open(output_path_, std::ios::app);
-    for (int i = 0; i < n_candidates; i++) {
+    for (int i = 0; i < n_candidates && i < MAX_CANDIDATE_COUNT; i++) {
       out << candidates + MAX_EID_COL_SIZE * 2 * i << ","
           << candidates + MAX_EID_COL_SIZE * 2 * i + MAX_EID_COL_SIZE
           << std::endl;

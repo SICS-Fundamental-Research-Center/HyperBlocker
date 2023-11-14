@@ -53,7 +53,7 @@ blocking_kernel(size_t n_rows_l, size_t n_rows_r, size_t aligned_tuple_size_l,
           }
           break;
         case SIM:
-          if (jaccard_kernel(d_tb_data_l + row_index_l * aligned_tuple_size_l +
+          if (lev_jaro_ratio(d_tb_data_l + row_index_l * aligned_tuple_size_l +
                                  d_col_offset_l[i],
                              d_tb_data_r + row_index_r * aligned_tuple_size_r +
                                  d_col_offset_r[i]) < d_sep.pred_threshold[i]) {

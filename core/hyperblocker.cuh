@@ -34,11 +34,12 @@ class HyperBlocker {
 public:
   HyperBlocker() = delete;
 
-
   HyperBlocker(const std::string &rule_dir, const std::string &data_path_l,
-               const std::string &data_path_r, const std::string &output_path)
+               const std::string &data_path_r, const std::string &output_path,
+               int n_partitions)
       : rule_dir_(rule_dir), data_path_l_(data_path_l),
-        data_path_r_(data_path_r), output_path_(output_path) {
+        data_path_r_(data_path_r), output_path_(output_path),
+        n_partitions_(n_partitions) {
     auto start_time = std::chrono::system_clock::now();
 
     p_hr_start_mtx_ = std::make_unique<std::mutex>();
@@ -46,8 +47,6 @@ public:
         std::make_unique<std::unique_lock<std::mutex>>(*p_hr_start_mtx_.get());
     p_hr_start_cv_ = std::make_unique<std::condition_variable>();
     streams_ = std::make_unique<std::unordered_map<int, cudaStream_t *>>();
-
-    p_match_ = std::make_unique<Match>();
 
     epg_ = std::make_unique<ExecutionPlanGenerator>(rule_dir_);
 
@@ -62,6 +61,8 @@ public:
           std::make_unique<sics::hyperblocker::core::components::DataMngr>(
               data_path_l_, data_path_r_, ",", false);
     }
+
+    p_match_ = std::make_unique<Match>();
 
     auto end_time = std::chrono::system_clock::now();
     std::cout << "HyperBlocker.Initialize() elapsed: "
@@ -79,7 +80,7 @@ public:
     auto start_time = std::chrono::system_clock::now();
 
     std::cout << streams_->size() << std::endl;
-    HostProducer hp(data_mngr_.get(), epg_.get(), streams_.get(),
+    HostProducer hp(n_partitions_, data_mngr_.get(), epg_.get(), streams_.get(),
                     p_match_.get(), p_hr_start_lck_.get(),
                     p_hr_start_cv_.get());
     HostReducer hr(output_path_, streams_.get(), p_match_.get(),
@@ -90,7 +91,6 @@ public:
 
     hp_thread.join();
     hr_thread.join();
-    //  hp.Run();
 
     auto end_time = std::chrono::system_clock::now();
 
@@ -134,6 +134,8 @@ private:
   const std::string data_path_l_;
   const std::string data_path_r_;
   const std::string output_path_;
+
+  const int n_partitions_ = 1;
 
   std::unique_ptr<std::mutex> p_hr_start_mtx_;
   std::unique_ptr<std::unique_lock<std::mutex>> p_hr_start_lck_;

@@ -31,13 +31,14 @@ using sics::hyperblocker::core::gpu::jaro;
 
 class HostProducer {
 public:
-  HostProducer(DataMngr *data_mngr, ExecutionPlanGenerator *epg,
+  HostProducer(int n_partitions, DataMngr *data_mngr,
+               ExecutionPlanGenerator *epg,
                std::unordered_map<int, cudaStream_t *> *p_streams,
                Match *p_match, std::unique_lock<std::mutex> *p_hr_start_lck,
                std::condition_variable *p_hr_start_cv)
-      : data_mngr_(data_mngr), epg_(epg), p_streams_(p_streams),
-        p_match_(p_match), p_hr_start_lck_(p_hr_start_lck),
-        p_hr_start_cv_(p_hr_start_cv) {
+      : n_partitions_(n_partitions), data_mngr_(data_mngr), epg_(epg),
+        p_streams_(p_streams), p_match_(p_match),
+        p_hr_start_lck_(p_hr_start_lck), p_hr_start_cv_(p_hr_start_cv) {
 
     std::cout << "Host Producer initializing." << std::endl;
 
@@ -47,24 +48,33 @@ public:
     cudaDeviceProp devProp;
     cudaStatus = cudaGetDeviceCount(&n_device_);
     scheduler_ = new EvenSplitScheduler(n_device_);
+    data_mngr_->DataPartitioning(epg_->GetExecutionPlan(), n_partitions_);
   }
 
   void Run() {
     std::cout << "Host Producer running on " << n_device_ << " devices."
               << std::endl;
 
-    data_mngr_->DataPartitioning(epg_->GetExecutionPlan(), n_device_);
     auto sep = epg_->GetExecutionPlan();
+
+    std::cout << jaro("Adaptable query optimization and evaluation in temporal "
+                      "middleware",
+                      "Adaptable Query Optimization and Evaluation in Temporal "
+                      "Middleware")
+              << std::endl;
 
     // TODO: Add procedure of submitting tasks.
     for (size_t i = 0; i < data_mngr_->get_n_partitions(); i++) {
+
       auto partition = data_mngr_->GetPartition(i);
+
+      if (partition.first.get_n_rows() == 0 ||
+          partition.second.get_n_rows() == 0)
+        continue;
       auto bin_id = scheduler_->GetBinID(i);
-      std::cout << "Table 1 size: " << partition.first.get_n_rows()
-                << std::endl;
-      std::cout << "Table 2 size: " << partition.second.get_n_rows()
-                << std::endl;
-      std::cout << "Device_id: " << bin_id << std::endl;
+      std::cout << "Submit Info: table 1 size -  " << partition.first.get_n_rows()
+                << ", table 2 size - " << partition.second.get_n_rows()
+                << ", Device_id - " << bin_id << std::endl;
 
       cudaStream_t *p_stream = new cudaStream_t;
       cudaStreamCreate(p_stream);
@@ -96,7 +106,7 @@ public:
     cudaMemcpyAsync(d_sep.n_rules, h_sep.n_rules, sizeof(int),
                     cudaMemcpyHostToDevice, *p_stream);
     cudaMemcpyAsync(d_sep.length, h_sep.length, sizeof(int),
-                    cudaMemcpyHostToDevice);
+                    cudaMemcpyHostToDevice, *p_stream);
     cudaMemcpyAsync(d_sep.pred_index, h_sep.pred_index,
                     sizeof(int) * *h_sep.length, cudaMemcpyHostToDevice,
                     *p_stream);
@@ -210,6 +220,7 @@ public:
 
 private:
   int n_device_ = 0;
+  int n_partitions_ = 1;
 
   std::unique_lock<std::mutex> *p_hr_start_lck_;
   std::condition_variable *p_hr_start_cv_;

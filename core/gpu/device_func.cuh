@@ -25,11 +25,15 @@ __host__ bool equalities(const char *term_l, const char *term_r, size_t len_l,
   return true;
 }
 
-__host__ float jaro(const char *term_l, const char *term_r, size_t len_l,
-                    size_t len_r) {
+__host__ float jaro(const char *term_l, const char *term_r) {
   std::cout << term_l << std::endl;
   std::cout << term_r << std::endl;
   size_t i, j, halflen, trans, match, to;
+  int len_l = 0, len_r = 0;
+  for (int i = 0; term_l[i]; i++)
+    len_l++;
+  for (int i = 0; term_r[i]; i++)
+    len_r++;
   float md;
   if (len_l == len_r && len_l == 0)
     return 1;
@@ -105,14 +109,22 @@ __device__ bool equalities_kernel(const char *term_l, const char *term_r,
   return true;
 }
 
-__device__ float lev_jaro_ratio(size_t len_l, const char *term_l, size_t len_r,
-                                const char *term_r) {
+__device__ float lev_jaro_ratio(const char *term_l, const char *term_r) {
   size_t i, j, halflen, trans, match, to;
+  size_t len_l = 0, len_r = 0;
+  for (int i = 0; term_l[i]; i++)
+    len_l++;
+  for (int i = 0; term_r[i]; i++)
+    len_r++;
+
   float md;
-  if (len_l == len_r && len_l == 0)
-    return 1;
-  if (len_l == len_r && len_l > 0)
-    return 0;
+  if (len_r == 0 || len_l == 0)
+  {
+    if (len_l == 0 && len_r == 0)
+      return 1.0;
+    return 0.0;
+  }
+
 
   if (len_l > len_r) {
     const char *b;
