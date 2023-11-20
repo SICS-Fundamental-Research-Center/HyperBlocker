@@ -34,12 +34,15 @@ public:
     p_hr_start_cv_->wait(*p_hr_start_lck_,
                          [&] { return p_streams_->size() > 0; });
 
+    auto start_time = std::chrono::system_clock::now();
     std::cout << "Host Reducer running on " << n_device_ << " devices."
               << std::endl;
 
     while (p_streams_->size() > 0) {
       for (auto iter = p_streams_->begin(); iter != p_streams_->end();) {
+
         if (cudaStreamQuery(*iter->second) == cudaSuccess) {
+          cudaStreamSynchronize(*iter->second);
           std::cout << "Ball id " << iter->first << "/" << p_streams_->size()
                     << " output: "
                     << p_match_->GetNCandidatesbyBallID(iter->first)

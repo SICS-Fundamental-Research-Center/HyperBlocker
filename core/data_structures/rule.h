@@ -48,7 +48,7 @@ public:
     std::cout << std::endl;
     std::cout << "    Threshold: ";
     for (auto &i : pre.threshold)
-      std::cout << i.first << ": " << i.second << ", ";
+      std::cout << "pred: " << i.first << " - threshold: " << i.second << ", ";
     std::cout << std::endl;
     std::cout << "  Conseq: " << std::endl;
     std::cout << "    Equality: ";

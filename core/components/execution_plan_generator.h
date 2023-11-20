@@ -1,7 +1,7 @@
 #ifndef HYPERBLOCKER_CORE_COMPONENTS_EXECUTIONPLANGENERATOR_H_
 #define HYPERBLOCKER_CORE_COMPONENTS_EXECUTIONPLANGENERATOR_H_
 
-#include <climits>
+#include <experimental/filesystem>
 #include <string>
 
 #include "core/common/types.h"
@@ -40,8 +40,13 @@ public:
       yaml_node = YAML::LoadFile(rule_path.string());
       auto rule = yaml_node.as<Rule>();
       rule_vec_.push_back(rule);
-      rule.Show();
     }
+    std::sort(rule_vec_.begin(), rule_vec_.end(),
+              [](const auto &rule1, const auto &rule2) {
+                return rule1.pre.eq.size() < rule2.pre.eq.size();
+              });
+    for (auto &iter : rule_vec_)
+      iter.Show();
   }
 
   SerializedExecutionPlan
@@ -79,25 +84,21 @@ public:
             rule_vec_[i].pre.eq.begin() + 2, rule_vec_[i].pre.eq.end(),
             [&visited, &serialized_pred_index_vec, &serialized_pred_type_vec,
              &serialized_pred_threshold_vec](auto &pred_index) {
-              if (!visited.GetBit(pred_index)) {
-                visited.SetBit(pred_index);
-                serialized_pred_index_vec.push_back(pred_index);
-                serialized_pred_type_vec.push_back(EQUALITIES);
-                serialized_pred_threshold_vec.push_back(1);
-              }
+              visited.SetBit(pred_index);
+              serialized_pred_index_vec.push_back(pred_index);
+              serialized_pred_type_vec.push_back(EQUALITIES);
+              serialized_pred_threshold_vec.push_back(1);
             });
 
         visited.Clear();
         std::for_each(
             rule_vec_[i].pre.sim.begin() + 2, rule_vec_[i].pre.sim.end(),
             [&, i](auto &pred_index) {
-              if (!visited.GetBit(pred_index)) {
-                visited.SetBit(pred_index);
-                serialized_pred_index_vec.push_back(pred_index);
-                serialized_pred_type_vec.push_back(SIM);
-                serialized_pred_threshold_vec.push_back(
-                    rule_vec_[i].pre.threshold.find(pred_index)->second);
-              }
+              visited.SetBit(pred_index);
+              serialized_pred_index_vec.push_back(pred_index);
+              serialized_pred_type_vec.push_back(SIM);
+              serialized_pred_threshold_vec.push_back(
+                  rule_vec_[i].pre.threshold.find(pred_index)->second);
             });
 
         serialized_pred_index_vec.push_back(CHECK_POINT);

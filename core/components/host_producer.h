@@ -4,6 +4,7 @@
 #include <cuda_runtime.h>
 #include <unistd.h>
 
+#include <climits>
 #include <condition_variable>
 #include <mutex>
 
@@ -27,7 +28,9 @@ using sics::hyperblocker::core::data_structures::SerializableTable;
 using sics::hyperblocker::core::data_structures::SerializedTable;
 using sics::hyperblocker::core::gpu::blocking_kernel;
 using sics::hyperblocker::core::gpu::equalities;
-using sics::hyperblocker::core::gpu::jaro;
+using sics::hyperblocker::core::gpu::host_jaccard_kernel;
+using sics::hyperblocker::core::gpu::host_lev_jaro_ratio;
+using sics::hyperblocker::core::gpu::host_lev_jaro_winkler_ratio;
 
 class HostProducer {
 public:
@@ -35,33 +38,31 @@ public:
                ExecutionPlanGenerator *epg,
                std::unordered_map<int, cudaStream_t *> *p_streams,
                Match *p_match, std::unique_lock<std::mutex> *p_hr_start_lck,
-               std::condition_variable *p_hr_start_cv)
+               std::condition_variable *p_hr_start_cv,
+               int prefix_hash_predicate_index = INT_MAX)
       : n_partitions_(n_partitions), data_mngr_(data_mngr), epg_(epg),
         p_streams_(p_streams), p_match_(p_match),
+        prefix_hash_predicate_index_(prefix_hash_predicate_index),
         p_hr_start_lck_(p_hr_start_lck), p_hr_start_cv_(p_hr_start_cv) {
 
     std::cout << "Host Producer initializing." << std::endl;
 
     p_streams_ = p_streams;
+
     // Get device information.
     cudaError_t cudaStatus;
     cudaDeviceProp devProp;
     cudaStatus = cudaGetDeviceCount(&n_device_);
     scheduler_ = new EvenSplitScheduler(n_device_);
-    data_mngr_->DataPartitioning(epg_->GetExecutionPlan(), n_partitions_);
   }
 
   void Run() {
     std::cout << "Host Producer running on " << n_device_ << " devices."
               << std::endl;
+    data_mngr_->DataPartitioning(epg_->GetExecutionPlan(), n_partitions_,
+                                 prefix_hash_predicate_index_);
 
     auto sep = epg_->GetExecutionPlan();
-
-    std::cout << jaro("Adaptable query optimization and evaluation in temporal "
-                      "middleware",
-                      "Adaptable Query Optimization and Evaluation in Temporal "
-                      "Middleware")
-              << std::endl;
 
     // TODO: Add procedure of submitting tasks.
     for (size_t i = 0; i < data_mngr_->get_n_partitions(); i++) {
@@ -72,7 +73,8 @@ public:
           partition.second.get_n_rows() == 0)
         continue;
       auto bin_id = scheduler_->GetBinID(i);
-      std::cout << "Submit Info: table 1 size -  " << partition.first.get_n_rows()
+      std::cout << "Submit Info: " << i << " " << partition.second.get_n_rows()
+                << ", table 1 size - " << partition.first.get_n_rows()
                 << ", table 2 size - " << partition.second.get_n_rows()
                 << ", Device_id - " << bin_id << std::endl;
 
@@ -80,8 +82,9 @@ public:
       cudaStreamCreate(p_stream);
       p_streams_->insert(std::make_pair(i, p_stream));
 
-      AsyncSubmit(partition.first, partition.second, sep, i, bin_id, p_stream);
+      AsyncSubmit(partition.first, partition.second, sep, i, 3, p_stream);
     }
+    std::cout << "HostProducer: notice all." << std::endl;
     p_hr_start_cv_->notify_all();
   }
 
@@ -89,6 +92,7 @@ public:
                             const SerializedTable &h_tb_r,
                             const SerializedExecutionPlan &h_sep, int ball_id,
                             int bin_id, cudaStream_t *p_stream) {
+    // cudaSetDevice(0);
     dim3 dimBlock(32);
     dim3 dimGrid(128);
 
@@ -187,7 +191,7 @@ public:
     cudaHostAlloc(&h_test_float, 65536 * sizeof(float), cudaHostAllocPortable);
 
     // Submit task
-    blocking_kernel<<<dimBlock, dimGrid, 48 * 1024, *p_stream>>>(
+    blocking_kernel<<<dimGrid, dimBlock, 48 * 1024, *p_stream>>>(
         h_tb_l.get_n_rows(), h_tb_r.get_n_rows(),
         h_tb_l.get_aligned_tuple_size(), h_tb_r.get_aligned_tuple_size(),
         d_tb_data_l, d_tb_data_r, d_col_size_l, d_col_size_r, d_col_offset_l,
@@ -205,22 +209,25 @@ public:
 
     p_match_->Append(ball_id, h_result_offset, h_candidates_char);
 
-    // cudaFreeHost(d_candidates);
-    // cudaFreeHost(d_tb_data_l);
-    // cudaFreeHost(d_tb_data_r);
-    // cudaFree(d_col_size_l);
-    // cudaFree(d_col_size_r);
-    // cudaFree(d_col_offset_l);
-    // cudaFree(d_col_offset_r);
-    // cudaFree(d_sep->pred_index);
-    // cudaFree(d_sep->pred_type);
-    // cudaFree(d_sep->pred_threshold);
+    // cudaStreamSynchronize(*p_stream);
+    //     cudaFreeHost(d_candidates);
+    //     cudaFreeHost(d_tb_data_l);
+    //     cudaFreeHost(d_tb_data_r);
+    //     cudaFree(d_col_size_l);
+    //     cudaFree(d_col_size_r);
+    //     cudaFree(d_col_offset_l);
+    //     cudaFree(d_col_offset_r);
+    //     cudaFree(d_sep->pred_index);
+    //     cudaFree(d_sep->pred_type);
+    //     cudaFree(d_sep->pred_threshold);
     std::cout << "AsyncSubmit finished." << std::endl;
   }
 
 private:
   int n_device_ = 0;
   int n_partitions_ = 1;
+
+  int prefix_hash_predicate_index_ = INT_MAX;
 
   std::unique_lock<std::mutex> *p_hr_start_lck_;
   std::condition_variable *p_hr_start_cv_;

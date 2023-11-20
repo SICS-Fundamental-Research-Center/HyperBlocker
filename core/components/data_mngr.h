@@ -1,12 +1,15 @@
 #ifndef HYPERBLOCKER_CORE_COMPONENTS_DATA_MNGR_H_
 #define HYPERBLOCKER_CORE_COMPONENTS_DATA_MNGR_H_
 
+#include <climits>
 #include <functional>
 #include <numeric>
-#include <rapidcsv.h>
 #include <string>
 #include <vector>
 
+#include <rapidcsv.h>
+
+#include "core/common/types.h"
 #include "core/components/execution_plan_generator.h"
 #include "core/data_structures/table.h"
 
@@ -42,8 +45,10 @@ public:
 
   DataMngr(const std::string &data_path_l, const std::string &data_path_r,
            const std::string &sep = ",", bool read_header = false) {
-    rapidcsv::Document doc_l(data_path_l, rapidcsv::LabelParams(0, -1));
-    rapidcsv::Document doc_r(data_path_r, rapidcsv::LabelParams(0, -1));
+    rapidcsv::Document doc_l(data_path_l, rapidcsv::LabelParams(-1, -1),
+                             rapidcsv::SeparatorParams(*sep.c_str()));
+    rapidcsv::Document doc_r(data_path_r, rapidcsv::LabelParams(-1, -1),
+                             rapidcsv::SeparatorParams(*sep.c_str()));
 
     auto n_rows_l = doc_l.GetRowCount();
     auto n_cols_l = doc_l.GetColumnCount();
@@ -74,7 +79,7 @@ public:
   }
 
   void DataPartitioning(const SerializedExecutionPlan &serialized_ep,
-                        size_t n_partitions) {
+                        size_t n_partitions, int prefix_hash_predicate_index) {
     if (is_complete_)
       return;
 
@@ -148,11 +153,24 @@ public:
              j++) {
           if (serialized_ep.pred_type[j] == EQUALITIES) {
             auto pred_index = serialized_ep.pred_index[j];
-            bucket_id = (std::hash<std::string>{}(cols_l[pred_index][i]) +
-                         std::hash<int>{}(bucket_id)) %
-                        n_partitions;
+            auto local_bucket_id =
+                (std::hash<std::string>{}(cols_l[pred_index][i])) %
+                n_partitions;
+            bucket_id = (bucket_id + local_bucket_id) % n_partitions;
           }
         }
+
+        if (prefix_hash_predicate_index != INT_MAX) {
+          if (cols_l[prefix_hash_predicate_index][i].length() > 2) {
+            auto two_d_bucket_id =
+                (std::hash<std::string>{}(
+                     cols_l[prefix_hash_predicate_index][i].substr(2)) +
+                 std::hash<int>{}(bucket_id)) %
+                (n_partitions);
+            bucket_id = (bucket_id + two_d_bucket_id) % n_partitions;
+          }
+        }
+
         for (size_t k = 0; k < serializable_table_l.get_n_cols(); k++) {
           bucket_l[bucket_id][k].push_back(cols_l[k][i]);
         }
@@ -165,11 +183,24 @@ public:
              j++) {
           if (serialized_ep.pred_type[j] == EQUALITIES) {
             auto pred_index = serialized_ep.pred_index[j];
-            bucket_id = (std::hash<std::string>{}(cols_r[pred_index][i]) +
-                         std::hash<int>{}(bucket_id)) %
-                        n_partitions;
+            auto local_bucket_id =
+                (std::hash<std::string>{}(cols_r[pred_index][i])) %
+                n_partitions;
+            bucket_id = (bucket_id + local_bucket_id) % n_partitions;
           }
         }
+
+        if (prefix_hash_predicate_index != INT_MAX) {
+          if (cols_r[prefix_hash_predicate_index][i].length() > 2) {
+            auto two_d_bucket_id =
+                (std::hash<std::string>{}(
+                     cols_r[prefix_hash_predicate_index][i].substr(2)) +
+                 std::hash<int>{}(bucket_id)) %
+                (n_partitions);
+            bucket_id = (bucket_id + two_d_bucket_id) % n_partitions;
+          }
+        }
+
         for (size_t k = 0; k < serializable_table_r.get_n_cols(); k++) {
           bucket_r[bucket_id][k].push_back(cols_r[k][i]);
         }

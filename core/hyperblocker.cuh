@@ -36,10 +36,12 @@ public:
 
   HyperBlocker(const std::string &rule_dir, const std::string &data_path_l,
                const std::string &data_path_r, const std::string &output_path,
-               int n_partitions)
+               int n_partitions, int prefix_hash_predicate_index = INT_MAX,
+               const std::string &sep = ",")
       : rule_dir_(rule_dir), data_path_l_(data_path_l),
         data_path_r_(data_path_r), output_path_(output_path),
-        n_partitions_(n_partitions) {
+        n_partitions_(n_partitions),
+        prefix_hash_predicate_index_(prefix_hash_predicate_index) {
     auto start_time = std::chrono::system_clock::now();
 
     p_hr_start_mtx_ = std::make_unique<std::mutex>();
@@ -54,12 +56,12 @@ public:
       std::cout << "DirtyER" << std::endl;
       data_mngr_ =
           std::make_unique<sics::hyperblocker::core::components::DataMngr>(
-              data_path_l_, ",", false);
+              data_path_l_, sep, false);
     } else {
       std::cout << "CleanCleanER" << std::endl;
       data_mngr_ =
           std::make_unique<sics::hyperblocker::core::components::DataMngr>(
-              data_path_l_, data_path_r_, ",", false);
+              data_path_l_, data_path_r_, sep, false);
     }
 
     p_match_ = std::make_unique<Match>();
@@ -81,8 +83,8 @@ public:
 
     std::cout << streams_->size() << std::endl;
     HostProducer hp(n_partitions_, data_mngr_.get(), epg_.get(), streams_.get(),
-                    p_match_.get(), p_hr_start_lck_.get(),
-                    p_hr_start_cv_.get());
+                    p_match_.get(), p_hr_start_lck_.get(), p_hr_start_cv_.get(),
+                    prefix_hash_predicate_index_);
     HostReducer hr(output_path_, streams_.get(), p_match_.get(),
                    p_hr_start_lck_.get(), p_hr_start_cv_.get());
 
@@ -135,7 +137,8 @@ private:
   const std::string data_path_r_;
   const std::string output_path_;
 
-  const int n_partitions_ = 1;
+  const int n_partitions_;
+  const int prefix_hash_predicate_index_;
 
   std::unique_ptr<std::mutex> p_hr_start_mtx_;
   std::unique_ptr<std::unique_lock<std::mutex>> p_hr_start_lck_;
