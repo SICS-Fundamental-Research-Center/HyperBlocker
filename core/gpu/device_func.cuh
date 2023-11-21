@@ -10,12 +10,22 @@ namespace gpu {
 
 using sics::hyperblocker::core::gpu::KernelBitmap;
 
-__host__ bool equalities(const char *term_l, const char *term_r, size_t len_l,
-                         size_t len_r) {
+__host__ bool equalities(const char *term_l, const char *term_r,
+                         size_t len_l = 0, size_t len_r = 0) {
   std::cout << term_l << std::endl;
   std::cout << term_r << std::endl;
-  size_t len = len_l < len_r ? len_l : len_r;
-  for (size_t i = 0; i < len - 1; i++) {
+
+  if (len_l == 0)
+    for (int i = 0; term_l[i]; i++)
+      len_l++;
+  if (len_r == 0)
+    for (int i = 0; term_r[i]; i++)
+      len_r++;
+
+  if (len_l != len_r)
+    return false;
+
+  for (size_t i = 0; i < len_l; i++) {
     if (*(term_l + i) != *(term_r + i))
       return false;
   }
@@ -23,9 +33,17 @@ __host__ bool equalities(const char *term_l, const char *term_r, size_t len_l,
 }
 
 __device__ bool equalities_kernel(const char *term_l, const char *term_r,
-                                  size_t len_l, size_t len_r) {
-  size_t len = len_l < len_r ? len_l : len_r;
-  for (size_t i = 0; i < len - 1; i++) {
+                                  size_t len_l = 0, size_t len_r = 0) {
+  if (len_l == 0)
+    for (int i = 0; term_l[i]; i++)
+      len_l++;
+  if (len_r == 0)
+    for (int i = 0; term_r[i]; i++)
+      len_r++;
+  if (len_l != len_r)
+    return false;
+
+  for (size_t i = 0; i < len_l; i++) {
     if (*(term_l + i) != *(term_r + i))
       return false;
   }
@@ -178,7 +196,7 @@ __host__ float host_lev_jaro_ratio(const char *term_l, const char *term_r,
       }
     }
     md = (float)match + 1;
-    result = (md / len_l + md / len_r ) / 3.0;
+    result = (md / len_l + md / len_r + 1.0) / 3.0;
   }
   free(idx);
   return result;
@@ -195,6 +213,16 @@ __device__ double lev_jaro_winkler_ratio(const char *string1,
     len1++;
   for (int i = 0; string2[i]; i++)
     len2++;
+  if (len1 == len2) {
+    size_t count = 0;
+    for (size_t i = 0; i < len1; i++) {
+      if (*(string1 + i) == *(string2 + i))
+        ++count;
+    }
+    if (count == len1)
+      return 1.0;
+  }
+
   j = lev_jaro_ratio(string1, string2, len1, len2);
 
   m = len1 < len2 ? len1 : len2;
@@ -217,6 +245,7 @@ __host__ double host_lev_jaro_winkler_ratio(const char *string1,
     len1++;
   for (int i = 0; string2[i]; i++)
     len2++;
+
   j = host_lev_jaro_ratio(string1, string2, len1, len2);
 
   m = len1 < len2 ? len1 : len2;

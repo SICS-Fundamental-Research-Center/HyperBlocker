@@ -44,8 +44,7 @@ blocking_kernel(size_t n_rows_l, size_t n_rows_r, size_t aligned_tuple_size_l,
                   d_tb_data_l + row_index_l * aligned_tuple_size_l +
                       d_col_offset_l[pred_index_l],
                   d_tb_data_r + row_index_r * aligned_tuple_size_r +
-                      d_col_offset_r[pred_index_r],
-                  d_col_size_l[pred_index_l], d_col_size_r[pred_index_r])) {
+                      d_col_offset_r[pred_index_r])) {
             to_skip = true;
           }
           break;
@@ -77,8 +76,8 @@ blocking_kernel(size_t n_rows_l, size_t n_rows_r, size_t aligned_tuple_size_l,
 
       // is a match then output the result.
       if (is_match) {
-        // if (row_index_l == row_index_r)
-        //   continue;
+        if (row_index_l == row_index_r)
+          continue;
         int local_offset = atomicAdd(result_offset, 1);
         if (local_offset > MAX_CANDIDATE_COUNT - 1)
           break;

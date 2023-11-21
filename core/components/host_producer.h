@@ -9,7 +9,9 @@
 #include <mutex>
 
 #include "core/common/types.h"
+#include "core/components/execution_plan_generator.h"
 #include "core/components/scheduler/even_split_scheduler.h"
+#include "core/components/scheduler/round_robin_scheduler.h"
 #include "core/data_structures/match.h"
 #include "core/data_structures/table.h"
 #include "core/gpu/global_func.cuh"
@@ -53,7 +55,8 @@ public:
     cudaError_t cudaStatus;
     cudaDeviceProp devProp;
     cudaStatus = cudaGetDeviceCount(&n_device_);
-    scheduler_ = new EvenSplitScheduler(n_device_);
+    // scheduler_ = new EvenSplitScheduler(n_device_);
+    scheduler_ = new RoundRobinScheduler(n_device_);
   }
 
   void Run() {
@@ -62,7 +65,12 @@ public:
     data_mngr_->DataPartitioning(epg_->GetExecutionPlan(), n_partitions_,
                                  prefix_hash_predicate_index_);
 
-    auto sep = epg_->GetExecutionPlan();
+      auto sep = epg_->GetExecutionPlan(kSimFirst);
+    //auto sep = epg_->GetExecutionPlan();
+
+    for (size_t i = 0; i < *sep.length; i++) {
+      std::cout << sep.pred_index[i] << " " << sep.pred_type[i] << std::endl;
+    }
 
     // TODO: Add procedure of submitting tasks.
     for (size_t i = 0; i < data_mngr_->get_n_partitions(); i++) {
@@ -78,6 +86,7 @@ public:
                 << ", table 2 size - " << partition.second.get_n_rows()
                 << ", Device_id - " << bin_id << std::endl;
 
+      cudaSetDevice(bin_id);
       cudaStream_t *p_stream = new cudaStream_t;
       cudaStreamCreate(p_stream);
       p_streams_->insert(std::make_pair(i, p_stream));
@@ -92,7 +101,6 @@ public:
                             const SerializedTable &h_tb_r,
                             const SerializedExecutionPlan &h_sep, int ball_id,
                             int bin_id, cudaStream_t *p_stream) {
-    // cudaSetDevice(0);
     dim3 dimBlock(32);
     dim3 dimGrid(128);
 
