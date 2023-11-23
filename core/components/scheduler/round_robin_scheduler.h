@@ -4,16 +4,31 @@
 #include "core/components/scheduler/scheduler.h"
 #include "core/util/bitmap.h"
 
+namespace sics {
+namespace hyperblocker {
+namespace core {
+namespace components {
+namespace scheduler {
+
 class RoundRobinScheduler : public Scheduler {
 public:
   RoundRobinScheduler(int n_device) : Scheduler(n_device) {
     bitmap_.Init(n_device);
+    std::cout << "Scheduler: RoundRobin" << std::endl;
   }
 
   int GetBinID(int ball_id = 0) override { return ball_id % get_n_device(); }
+
+  void Release(int bin_id, int n_threads) override {}
+  void Consume(int bin_id, int n_threads) override {}
 
 private:
   Bitmap bitmap_;
 };
 
+} // namespace scheduler
+} // namespace components
+} // namespace core
+} // namespace hyperblocker
+} // namespace sics
 #endif // HYPERBLOCKER_CORE_COMPONENTS_SCHEDULER_ROUND_ROBIN_SCHEDULER_H_

@@ -17,36 +17,32 @@ using sics::hyperblocker::core::data_structures::Match;
 
 class HostReducer {
 public:
-  HostReducer(const std::string &output_path,
+  HostReducer(const std::string &output_path, scheduler::Scheduler *scheduler,
               std::unordered_map<int, cudaStream_t *> *p_streams,
               Match *p_match, std::unique_lock<std::mutex> *p_hr_start_lck,
               std::condition_variable *p_hr_start_cv)
       : output_path_(output_path), p_streams_(p_streams), p_match_(p_match),
-        p_hr_start_lck_(p_hr_start_lck), p_hr_start_cv_(p_hr_start_cv) {
-    // Get device information.
-    cudaError_t cudaStatus;
-    std::cout << "Device properties" << std::endl;
-    cudaDeviceProp devProp;
-    cudaStatus = cudaGetDeviceCount(&n_device_);
-  }
+        p_hr_start_lck_(p_hr_start_lck), p_hr_start_cv_(p_hr_start_cv),
+        scheduler_(scheduler) {}
 
   void Run() {
     p_hr_start_cv_->wait(*p_hr_start_lck_,
                          [&] { return p_streams_->size() > 0; });
 
     auto start_time = std::chrono::system_clock::now();
-    std::cout << "Host Reducer running on " << n_device_ << " devices."
-              << std::endl;
+    std::cout << "Host Reducer running" << std::endl;
 
     while (p_streams_->size() > 0) {
       for (auto iter = p_streams_->begin(); iter != p_streams_->end();) {
 
         if (cudaStreamQuery(*iter->second) == cudaSuccess) {
-          cudaStreamSynchronize(*iter->second);
+          // cudaStreamSynchronize(*iter->second);
           std::cout << "Ball id " << iter->first << "/" << p_streams_->size()
                     << " output: "
                     << p_match_->GetNCandidatesbyBallID(iter->first)
                     << std::endl;
+          auto bin_id = scheduler_->get_bin_id_by_ball_id(iter->first);
+          scheduler_->Release(bin_id, 256 * 1024);
           WriteMatch(p_match_->GetNCandidatesbyBallID(iter->first),
                      p_match_->GetCandidatesBasePtr(iter->first));
           iter = p_streams_->erase(iter);
@@ -80,7 +76,8 @@ private:
   }
 
   const std::string output_path_;
-  int n_device_ = 0;
+
+  scheduler::Scheduler *scheduler_;
 
   std::unique_lock<std::mutex> *p_hr_start_lck_;
   std::condition_variable *p_hr_start_cv_;

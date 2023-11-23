@@ -17,6 +17,10 @@
 #include "core/components/execution_plan_generator.h"
 #include "core/components/host_producer.h"
 #include "core/components/host_reducer.h"
+#include "core/components/scheduler/CHBL_scheduler.h"
+#include "core/components/scheduler/even_split_scheduler.h"
+#include "core/components/scheduler/round_robin_scheduler.h"
+#include "core/components/scheduler/scheduler.h"
 #include "core/data_structures/match.h"
 
 namespace sics {
@@ -27,6 +31,9 @@ using sics::hyperblocker::core::components::DataMngr;
 using sics::hyperblocker::core::components::ExecutionPlanGenerator;
 using sics::hyperblocker::core::components::HostProducer;
 using sics::hyperblocker::core::components::HostReducer;
+using sics::hyperblocker::core::components::scheduler::kCHBL;
+using sics::hyperblocker::core::components::scheduler::kEvenSplit;
+using sics::hyperblocker::core::components::scheduler::kRoundRobin;
 using sics::hyperblocker::core::data_structures::Match;
 using sics::hyperblocker::core::data_structures::Rule;
 
@@ -37,11 +44,15 @@ public:
   HyperBlocker(const std::string &rule_dir, const std::string &data_path_l,
                const std::string &data_path_r, const std::string &output_path,
                int n_partitions, int prefix_hash_predicate_index = INT_MAX,
-               const std::string &sep = ",")
+               const std::string &sep = ",",
+               components::scheduler::SchedulerType scheduler_type = kCHBL)
       : rule_dir_(rule_dir), data_path_l_(data_path_l),
         data_path_r_(data_path_r), output_path_(output_path),
         n_partitions_(n_partitions),
         prefix_hash_predicate_index_(prefix_hash_predicate_index) {
+
+    Init();
+
     auto start_time = std::chrono::system_clock::now();
 
     p_hr_start_mtx_ = std::make_unique<std::mutex>();
@@ -51,6 +62,21 @@ public:
     streams_ = std::make_unique<std::unordered_map<int, cudaStream_t *>>();
 
     epg_ = std::make_unique<ExecutionPlanGenerator>(rule_dir_);
+
+    switch (scheduler_type) {
+    case kCHBL:
+      scheduler_ =
+          std::make_unique<components::scheduler::CHBLScheduler>(n_device_);
+      break;
+    case kEvenSplit:
+      scheduler_ = std::make_unique<components::scheduler::EvenSplitScheduler>(
+          n_device_);
+      break;
+    case kRoundRobin:
+      scheduler_ = std::make_unique<components::scheduler::RoundRobinScheduler>(
+          n_device_);
+      break;
+    }
 
     if (data_path_r_.empty()) {
       std::cout << "DirtyER" << std::endl;
@@ -81,12 +107,13 @@ public:
 
     auto start_time = std::chrono::system_clock::now();
 
-    std::cout << streams_->size() << std::endl;
-    HostProducer hp(n_partitions_, data_mngr_.get(), epg_.get(), streams_.get(),
-                    p_match_.get(), p_hr_start_lck_.get(), p_hr_start_cv_.get(),
+    ShowDeviceProperties();
+    HostProducer hp(n_partitions_, data_mngr_.get(), epg_.get(),
+                    scheduler_.get(), streams_.get(), p_match_.get(),
+                    p_hr_start_lck_.get(), p_hr_start_cv_.get(),
                     prefix_hash_predicate_index_);
-    HostReducer hr(output_path_, streams_.get(), p_match_.get(),
-                   p_hr_start_lck_.get(), p_hr_start_cv_.get());
+    HostReducer hr(output_path_, scheduler_.get(), streams_.get(),
+                   p_match_.get(), p_hr_start_lck_.get(), p_hr_start_cv_.get());
 
     std::thread hp_thread(&HostProducer::Run, &hp);
     std::thread hr_thread(&HostReducer::Run, &hr);
@@ -123,15 +150,27 @@ public:
                 << std::endl;
       std::cout << "maxThreadsPerMultiProcessor："
                 << devProp.maxThreadsPerMultiProcessor << std::endl;
-      std::cout << "maxThreadsPerMultiProcessor："
-                << devProp.maxThreadsPerMultiProcessor / 32 << std::endl;
       std::cout << std::endl;
     }
+    n_device_ = dev;
+  }
+
+  void Init() {
+    cudaError_t cudaStatus;
+    std::cout << "Device properties" << std::endl;
+    int dev = 0;
+    cudaDeviceProp devProp;
+    cudaStatus = cudaGetDeviceCount(&dev);
+    printf("error %d\n", cudaStatus);
+
+    n_device_ = dev;
   }
 
   std::vector<Rule> rule_vec_;
 
 private:
+  int n_device_ = 0;
+
   const std::string rule_dir_;
   const std::string data_path_l_;
   const std::string data_path_r_;
@@ -148,6 +187,7 @@ private:
   std::unique_ptr<DataMngr> data_mngr_;
   std::unique_ptr<std::unordered_map<int, cudaStream_t *>> streams_;
 
+  std::unique_ptr<components::scheduler::Scheduler> scheduler_;
   std::unique_ptr<Match> p_match_;
 };
 

@@ -1,0 +1,21 @@
+(base) [zhuxiaoke@distr-node2 HyperBlocker]$ python tools/verify_result.py /data/zhuxiaoke/ER_Dataset/EC/5Party-ocp20/output/output13.csv /data/zhuxiaoke/ER_Dataset/EC/5Party-ocp20/cleared/ncvr_numrec_1000000_
+modrec_2_ocp_20_myp_0_nump_5_cleared.csv /data/zhuxiaoke/ER_Dataset/EC/5Party-ocp20/cleared/ncvr_numrec_1000000_modrec_2_ocp_20_myp_1_nump_5_cleared.csv
+/home/zhuxiaoke/project/er/HyperBlocker/tools/verify_result.py:90: DtypeWarning: Columns (4) have mixed types.Specify dtype option on import or set low_memory=False.
+  verify(sys.argv[1], sys.argv[2], sys.argv[3])
+              0        1
+              0     3760990  6690417
+              3     5203338  5203338
+              4     7545159  7545159
+              15    2642981  2642864
+              16     753176   753176
+              ...       ...      ...
+              4450  2350112  2350112
+              4451  7272774  7272774
+              4457  7489328  7489328
+              4458  1560963  1560963
+              4468   535647  5991161
+
+              [496 rows x 2 columns]
+              461
+              333001
+              self prec:  0.9294354838709677 recall:  0.0013843802270864052 f1:  0.0027646425605027934

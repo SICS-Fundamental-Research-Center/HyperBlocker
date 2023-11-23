@@ -76,8 +76,8 @@ blocking_kernel(size_t n_rows_l, size_t n_rows_r, size_t aligned_tuple_size_l,
 
       // is a match then output the result.
       if (is_match) {
-        if (row_index_l == row_index_r)
-          continue;
+        //if (row_index_l == row_index_r)
+        //  continue;
         int local_offset = atomicAdd(result_offset, 1);
         if (local_offset > MAX_CANDIDATE_COUNT - 1)
           break;

@@ -10,6 +10,7 @@
 
 #include "core/common/types.h"
 #include "core/components/execution_plan_generator.h"
+#include "core/components/scheduler/CHBL_scheduler.h"
 #include "core/components/scheduler/even_split_scheduler.h"
 #include "core/components/scheduler/round_robin_scheduler.h"
 #include "core/data_structures/match.h"
@@ -37,7 +38,7 @@ using sics::hyperblocker::core::gpu::host_lev_jaro_winkler_ratio;
 class HostProducer {
 public:
   HostProducer(int n_partitions, DataMngr *data_mngr,
-               ExecutionPlanGenerator *epg,
+               ExecutionPlanGenerator *epg, scheduler::Scheduler *scheduler,
                std::unordered_map<int, cudaStream_t *> *p_streams,
                Match *p_match, std::unique_lock<std::mutex> *p_hr_start_lck,
                std::condition_variable *p_hr_start_cv,
@@ -45,19 +46,8 @@ public:
       : n_partitions_(n_partitions), data_mngr_(data_mngr), epg_(epg),
         p_streams_(p_streams), p_match_(p_match),
         prefix_hash_predicate_index_(prefix_hash_predicate_index),
-        p_hr_start_lck_(p_hr_start_lck), p_hr_start_cv_(p_hr_start_cv) {
-
-    std::cout << "Host Producer initializing." << std::endl;
-
-    p_streams_ = p_streams;
-
-    // Get device information.
-    cudaError_t cudaStatus;
-    cudaDeviceProp devProp;
-    cudaStatus = cudaGetDeviceCount(&n_device_);
-    // scheduler_ = new EvenSplitScheduler(n_device_);
-    scheduler_ = new RoundRobinScheduler(n_device_);
-  }
+        p_hr_start_lck_(p_hr_start_lck), p_hr_start_cv_(p_hr_start_cv),
+        scheduler_(scheduler) {}
 
   void Run() {
     std::cout << "Host Producer running on " << n_device_ << " devices."
@@ -65,14 +55,13 @@ public:
     data_mngr_->DataPartitioning(epg_->GetExecutionPlan(), n_partitions_,
                                  prefix_hash_predicate_index_);
 
-      auto sep = epg_->GetExecutionPlan(kSimFirst);
-    //auto sep = epg_->GetExecutionPlan();
+    // auto sep = epg_->GetExecutionPlan(kSimFirst);
+    auto sep = epg_->GetExecutionPlan();
 
     for (size_t i = 0; i < *sep.length; i++) {
       std::cout << sep.pred_index[i] << " " << sep.pred_type[i] << std::endl;
     }
 
-    // TODO: Add procedure of submitting tasks.
     for (size_t i = 0; i < data_mngr_->get_n_partitions(); i++) {
 
       auto partition = data_mngr_->GetPartition(i);
@@ -81,6 +70,7 @@ public:
           partition.second.get_n_rows() == 0)
         continue;
       auto bin_id = scheduler_->GetBinID(i);
+      scheduler_->Consume(bin_id, 256 * 1024);
       std::cout << "Submit Info: " << i << " " << partition.second.get_n_rows()
                 << ", table 1 size - " << partition.first.get_n_rows()
                 << ", table 2 size - " << partition.second.get_n_rows()
@@ -91,7 +81,7 @@ public:
       cudaStreamCreate(p_stream);
       p_streams_->insert(std::make_pair(i, p_stream));
 
-      AsyncSubmit(partition.first, partition.second, sep, i, 3, p_stream);
+      AsyncSubmit(partition.first, partition.second, sep, i, p_stream);
     }
     std::cout << "HostProducer: notice all." << std::endl;
     p_hr_start_cv_->notify_all();
@@ -100,14 +90,14 @@ public:
   __host__ void AsyncSubmit(const SerializedTable &h_tb_l,
                             const SerializedTable &h_tb_r,
                             const SerializedExecutionPlan &h_sep, int ball_id,
-                            int bin_id, cudaStream_t *p_stream) {
-    dim3 dimBlock(32);
-    dim3 dimGrid(128);
-
+                            cudaStream_t *p_stream) {
     // h_tb_l.Show();
     // h_tb_r.Show();
-    //  Generate serialized execution plan in Device.
 
+    dim3 dimBlock(256);
+    dim3 dimGrid(1024);
+
+    //  Generate serialized execution plan in Device.
     SerializedExecutionPlan d_sep;
     cudaMalloc(&(d_sep.n_rules), sizeof(int));
     cudaMalloc(&(d_sep.length), sizeof(int));
@@ -240,8 +230,8 @@ private:
   std::unique_lock<std::mutex> *p_hr_start_lck_;
   std::condition_variable *p_hr_start_cv_;
 
-  Scheduler *scheduler_;
-  sics::hyperblocker::core::components::DataMngr *data_mngr_;
+  scheduler::Scheduler *scheduler_;
+  DataMngr *data_mngr_;
   ExecutionPlanGenerator *epg_;
 
   std::unordered_map<int, cudaStream_t *> *p_streams_;

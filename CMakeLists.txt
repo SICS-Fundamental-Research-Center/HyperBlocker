@@ -52,7 +52,7 @@ if (TEST)
 endif ()
 
 # gflags
-find_package(gflags CONFIG REQUIRED)
+add_subdirectory("${THIRD_PARTY_ROOT}/gflags" EXCLUDE_FROM_ALL)
 include_directories(SYSTEM ${GFLAGS_INCLUDE_DIR})
 
 # find TBB
@@ -80,10 +80,6 @@ if(NOT DEFINED CMAKE_CUDA_STANDARD)
     set(CMAKE_CUDA_STANDARD 11)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 endif()
-
-# folly
-find_package(FOLLY REQUIRED)
-include_directories(SYSTEM ${FOLLY_INCLUDE_DIR})
 
 #######################
 # Artifacts
