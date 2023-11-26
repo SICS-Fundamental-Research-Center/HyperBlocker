@@ -114,10 +114,6 @@ public:
 
     d_sep.n_rules = h_sep.n_rules;
     d_sep.length = h_sep.length;
-    // cudaMemcpyAsync(d_sep.n_rules, h_sep.n_rules, sizeof(int),
-    //                 cudaMemcpyHostToDevice, *p_stream);
-    // cudaMemcpyAsync(d_sep.length, h_sep.length, sizeof(int),
-    //                 cudaMemcpyHostToDevice, *p_stream);
     cudaMemcpyAsync(d_sep.pred_index, h_sep.pred_index,
                     sizeof(int) * h_sep.length, cudaMemcpyHostToDevice,
                     *p_stream);
@@ -244,10 +240,6 @@ public:
 
     d_sep.n_rules = h_sep.n_rules;
     d_sep.length = h_sep.length;
-    // cudaMemcpyAsync(d_sep.n_rules, h_sep.n_rules, sizeof(int),
-    //                 cudaMemcpyHostToDevice, *p_stream);
-    // cudaMemcpyAsync(d_sep.length, h_sep.length, sizeof(int),
-    //                 cudaMemcpyHostToDevice, *p_stream);
     cudaMemcpyAsync(d_sep.pred_index, h_sep.pred_index,
                     sizeof(int) * h_sep.length, cudaMemcpyHostToDevice,
                     *p_stream);

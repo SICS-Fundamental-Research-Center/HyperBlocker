@@ -60,8 +60,7 @@ public:
           std::lock_guard<std::mutex> lock(*p_streams_mtx_);
           ++iter;
         }else {
-          std::cout << "cudaStatus: " << cudaGetErrorString(cudaStatus)
-                    << std::endl;
+          std::cout << cudaGetErrorString(cudaStatus) << std::endl;
         }
       }
     }
