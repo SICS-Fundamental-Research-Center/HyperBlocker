@@ -5,6 +5,8 @@ namespace sics {
 namespace hyperblocker {
 namespace core {
 namespace gpu {
+
+/*
 __device__ class SerializedTable {
 public:
   __forceinline__ __device__ char *get_data_base_ptr() const { return data_; }
@@ -33,6 +35,7 @@ private:
   size_t *col_offset_;
   char *data_;
 };
+*/
 
 } // namespace gpu
 } // namespace core

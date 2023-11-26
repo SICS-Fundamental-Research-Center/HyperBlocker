@@ -19,11 +19,13 @@ class HostReducer {
 public:
   HostReducer(const std::string &output_path, scheduler::Scheduler *scheduler,
               std::unordered_map<int, cudaStream_t *> *p_streams,
-              Match *p_match, std::unique_lock<std::mutex> *p_hr_start_lck,
-              std::condition_variable *p_hr_start_cv)
-      : output_path_(output_path), p_streams_(p_streams), p_match_(p_match),
+              std::mutex *p_streams_mtx, Match *p_match,
+              std::unique_lock<std::mutex> *p_hr_start_lck,
+              std::condition_variable *p_hr_start_cv, bool *p_hr_terminable)
+      : output_path_(output_path), p_streams_(p_streams),
+        p_streams_mtx_(p_streams_mtx), p_match_(p_match),
         p_hr_start_lck_(p_hr_start_lck), p_hr_start_cv_(p_hr_start_cv),
-        scheduler_(scheduler) {}
+        scheduler_(scheduler), p_hr_terminable_(p_hr_terminable) {}
 
   void Run() {
     p_hr_start_cv_->wait(*p_hr_start_lck_,
@@ -32,10 +34,14 @@ public:
     auto start_time = std::chrono::system_clock::now();
     std::cout << "Host Reducer running" << std::endl;
 
-    while (p_streams_->size() > 0) {
+    size_t count = 0;
+    while (true) {
+      if (*p_hr_terminable_ && p_streams_->size() == 0)
+        break;
       for (auto iter = p_streams_->begin(); iter != p_streams_->end();) {
-
-        if (cudaStreamQuery(*iter->second) == cudaSuccess) {
+        sleep(0.4);
+        auto cudaStatus = cudaStreamQuery(*iter->second);
+        if (cudaStatus == cudaSuccess) {
           // cudaStreamSynchronize(*iter->second);
           std::cout << "Ball id " << iter->first << "/" << p_streams_->size()
                     << " output: "
@@ -45,12 +51,21 @@ public:
           scheduler_->Release(bin_id, 256 * 1024);
           WriteMatch(p_match_->GetNCandidatesbyBallID(iter->first),
                      p_match_->GetCandidatesBasePtr(iter->first));
+          std::lock_guard<std::mutex> lock(*p_streams_mtx_);
+          cudaStreamDestroy(*iter->second);
           iter = p_streams_->erase(iter);
-        } else {
+        } else if (cudaStatus == cudaErrorIllegalAddress) {
+          std::cout << cudaGetErrorString(cudaStatus) << std::endl;
+        } else if (cudaStatus == cudaErrorNotReady) {
+          std::lock_guard<std::mutex> lock(*p_streams_mtx_);
           ++iter;
+        }else {
+          std::cout << "cudaStatus: " << cudaGetErrorString(cudaStatus)
+                    << std::endl;
         }
       }
     }
+    std::cout << "Host Reducer finished" << std::endl;
   }
 
 private:
@@ -79,10 +94,13 @@ private:
 
   scheduler::Scheduler *scheduler_;
 
+  std::mutex *p_streams_mtx_;
   std::unique_lock<std::mutex> *p_hr_start_lck_;
   std::condition_variable *p_hr_start_cv_;
 
   std::unordered_map<int, cudaStream_t *> *p_streams_;
+
+  bool *p_hr_terminable_;
 
   Match *p_match_;
 };

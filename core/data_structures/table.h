@@ -2,6 +2,7 @@
 #define HYPERBLOCKER_CORE_DATA_STRUCTURES_TABLE_H_
 
 #include <cstring>
+#include <cuda_runtime.h>
 
 #include <rapidcsv.h>
 
@@ -54,7 +55,8 @@ public:
       : cols_(cols) {
     n_cols_ = cols.size();
     n_rows_ = cols[0].size();
-    Serialize();
+    // Serialize();
+    Serialize2PinnedMemory();
   }
 
   void Serialize() {
@@ -90,6 +92,66 @@ public:
         (((serialized_table_.aligned_tuple_size_ + 1) >> 6) << 6) + 64;
     serialized_table_.data_ = new char[serialized_table_.aligned_tuple_size_ *
                                        n_rows_ * sizeof(char)]();
+
+    // Second traversal to fill the data.
+    for (size_t i = 0; i < n_cols_; i++) {
+      auto &&col = cols_[i];
+      for (size_t j = 0; j < n_rows_; j++) {
+        std::memcpy(serialized_table_.data_ +
+                        serialized_table_.aligned_tuple_size_ * j +
+                        serialized_table_.col_offset_[i],
+                    col[j].c_str(), col[j].length() * sizeof(char));
+      }
+    }
+    delete[] max_length_col;
+    is_complete_ = true;
+  }
+
+  void Serialize2PinnedMemory() {
+    if (is_complete_)
+      return;
+
+    serialized_table_.n_cols_ = n_cols_;
+    serialized_table_.n_rows_ = n_rows_;
+
+    // First traversal to get the max length of the strings.
+    auto max_length_col = new unsigned[n_cols_]();
+    // serialized_table_.col_size_ = new size_t[n_cols_]();
+    // serialized_table_.col_offset_ = new size_t[n_cols_]();
+
+    cudaHostAlloc(&(serialized_table_.col_size_), sizeof(size_t) * n_cols_,
+                  cudaHostAllocPortable);
+    cudaHostAlloc(&(serialized_table_.col_offset_), sizeof(size_t) * n_cols_,
+                  cudaHostAllocPortable);
+
+    for (size_t i = 0; i < n_cols_; i++) {
+      auto &&col = cols_[i];
+      std::for_each(col.begin(), col.end(),
+                    [&max_length_col, i](std::string &s) {
+                      WriteMax((max_length_col + i), (unsigned)s.length());
+                    });
+      serialized_table_.col_size_[i] = max_length_col[i] + 1;
+    }
+
+    // Compute mata data of the table.
+    for (size_t i = 0; i < n_cols_; i++) {
+      serialized_table_.aligned_tuple_size_ += serialized_table_.col_size_[i];
+      if (i > 0)
+        serialized_table_.col_offset_[i] =
+            serialized_table_.col_offset_[i - 1] +
+            serialized_table_.col_size_[i - 1];
+    }
+
+    serialized_table_.aligned_tuple_size_ =
+        (((serialized_table_.aligned_tuple_size_ + 1) >> 6) << 6) + 64;
+    // serialized_table_.data_ = new char[serialized_table_.aligned_tuple_size_
+    // *
+    //                                    n_rows_ * sizeof(char)]();
+
+    cudaHostAlloc(&(serialized_table_.data_),
+                  sizeof(char) * n_rows_ *
+                      serialized_table_.aligned_tuple_size_,
+                  cudaHostAllocPortable);
 
     // Second traversal to fill the data.
     for (size_t i = 0; i < n_cols_; i++) {

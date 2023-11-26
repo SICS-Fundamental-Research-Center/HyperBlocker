@@ -55,6 +55,8 @@ public:
 
     auto start_time = std::chrono::system_clock::now();
 
+    p_streams_mtx_ = std::make_unique<std::mutex>();
+
     p_hr_start_mtx_ = std::make_unique<std::mutex>();
     p_hr_start_lck_ =
         std::make_unique<std::unique_lock<std::mutex>>(*p_hr_start_mtx_.get());
@@ -92,6 +94,8 @@ public:
 
     p_match_ = std::make_unique<Match>();
 
+    p_hr_terminable_ = std::make_unique<bool>(false);
+
     auto end_time = std::chrono::system_clock::now();
     std::cout << "HyperBlocker.Initialize() elapsed: "
               << std::chrono::duration_cast<std::chrono::microseconds>(
@@ -109,11 +113,12 @@ public:
 
     ShowDeviceProperties();
     HostProducer hp(n_partitions_, data_mngr_.get(), epg_.get(),
-                    scheduler_.get(), streams_.get(), p_match_.get(),
-                    p_hr_start_lck_.get(), p_hr_start_cv_.get(),
-                    prefix_hash_predicate_index_);
+                    scheduler_.get(), streams_.get(), p_streams_mtx_.get(),
+                    p_match_.get(), p_hr_start_lck_.get(), p_hr_start_cv_.get(),
+                    p_hr_terminable_.get(), prefix_hash_predicate_index_);
     HostReducer hr(output_path_, scheduler_.get(), streams_.get(),
-                   p_match_.get(), p_hr_start_lck_.get(), p_hr_start_cv_.get());
+                   p_streams_mtx_.get(), p_match_.get(), p_hr_start_lck_.get(),
+                   p_hr_start_cv_.get(), p_hr_terminable_.get());
 
     std::thread hp_thread(&HostProducer::Run, &hp);
     std::thread hr_thread(&HostReducer::Run, &hr);
@@ -179,6 +184,8 @@ private:
   const int n_partitions_;
   const int prefix_hash_predicate_index_;
 
+  std::unique_ptr<std::mutex> p_streams_mtx_;
+
   std::unique_ptr<std::mutex> p_hr_start_mtx_;
   std::unique_ptr<std::unique_lock<std::mutex>> p_hr_start_lck_;
   std::unique_ptr<std::condition_variable> p_hr_start_cv_;
@@ -189,6 +196,8 @@ private:
 
   std::unique_ptr<components::scheduler::Scheduler> scheduler_;
   std::unique_ptr<Match> p_match_;
+
+  std::unique_ptr<bool> p_hr_terminable_;
 };
 
 } // namespace core

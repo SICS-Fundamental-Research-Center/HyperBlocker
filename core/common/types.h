@@ -6,7 +6,7 @@
 #define EQUALITIES 'e'
 #define SIM 's'
 
-#define MAX_CANDIDATE_COUNT 65536
+#define MAX_CANDIDATE_COUNT 8192
 #define MAX_EID_COL_SIZE 64
 
 

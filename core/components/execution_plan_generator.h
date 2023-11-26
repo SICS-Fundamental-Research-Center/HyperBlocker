@@ -4,6 +4,8 @@
 #include <experimental/filesystem>
 #include <string>
 
+#include <cuda_runtime.h>
+
 #include "core/common/types.h"
 #include "core/util/atomic.h"
 #include "core/util/bitmap.h"
@@ -21,8 +23,8 @@ enum EPGStrategy {
 };
 
 struct SerializedExecutionPlan {
-  int *n_rules;
-  int *length;
+  int n_rules;
+  int length;
   int *pred_index;
   char *pred_type;
   float *pred_threshold;
@@ -52,9 +54,7 @@ public:
   SerializedExecutionPlan
   GetExecutionPlan(EPGStrategy strategy = kEqualitiesFirst) {
     SerializedExecutionPlan ep;
-    ep.n_rules = new int();
-    ep.length = new int();
-    *ep.n_rules = rule_vec_.size();
+    ep.n_rules = rule_vec_.size();
 
     switch (strategy) {
       // CASE 1: Equalities first
@@ -106,15 +106,21 @@ public:
         serialized_pred_threshold_vec.push_back(1);
       }
 
-      ep.pred_index = new int[serialized_pred_index_vec.size()]();
-      ep.pred_type = new char[serialized_pred_type_vec.size()]();
-      ep.pred_threshold = new float[serialized_pred_threshold_vec.size()]();
+      cudaHostAlloc(&(ep.pred_index),
+                    sizeof(int) * serialized_pred_index_vec.size(),
+                    cudaHostAllocDefault);
+      cudaHostAlloc(&(ep.pred_type),
+                    sizeof(char) * serialized_pred_type_vec.size(),
+                    cudaHostAllocDefault);
+      cudaHostAlloc(&(ep.pred_threshold),
+                    sizeof(float) * serialized_pred_threshold_vec.size(),
+                    cudaHostAllocDefault);
       for (size_t i = 0; i < serialized_pred_index_vec.size(); i++) {
         ep.pred_index[i] = serialized_pred_index_vec[i];
         ep.pred_type[i] = serialized_pred_type_vec[i];
         ep.pred_threshold[i] = serialized_pred_threshold_vec[i];
       }
-      *ep.length = serialized_pred_index_vec.size();
+      ep.length = serialized_pred_index_vec.size();
       break;
     }
     case kSimFirst:
@@ -162,15 +168,22 @@ public:
         serialized_pred_threshold_vec.push_back(1);
       }
 
-      ep.pred_index = new int[serialized_pred_index_vec.size()]();
-      ep.pred_type = new char[serialized_pred_type_vec.size()]();
-      ep.pred_threshold = new float[serialized_pred_threshold_vec.size()]();
+      cudaHostAlloc(&(ep.pred_index),
+                    sizeof(int) * serialized_pred_index_vec.size(),
+                    cudaHostAllocDefault);
+      cudaHostAlloc(&(ep.pred_type),
+                    sizeof(char) * serialized_pred_type_vec.size(),
+                    cudaHostAllocDefault);
+      cudaHostAlloc(&(ep.pred_threshold),
+                    sizeof(float) * serialized_pred_threshold_vec.size(),
+                    cudaHostAllocDefault);
+
       for (size_t i = 0; i < serialized_pred_index_vec.size(); i++) {
         ep.pred_index[i] = serialized_pred_index_vec[i];
         ep.pred_type[i] = serialized_pred_type_vec[i];
         ep.pred_threshold[i] = serialized_pred_threshold_vec[i];
       }
-      *ep.length = serialized_pred_index_vec.size();
+      ep.length = serialized_pred_index_vec.size();
       break;
     }
     return ep;

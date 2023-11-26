@@ -30,11 +30,11 @@ public:
   }
 
   int GetBinID(int ball_id = 0) override {
-    auto bin_id = (ball_id) % get_n_device();
+    auto bin_id = Hash(ball_id) % get_n_device();
 
     int i = get_n_device();
     bool full = false;
-    while (GetAvailableThreads(bin_id) < 0) {
+    while (GetAvailableThreads(bin_id) < -1 * 256 * 1024 * 72) {
       bin_id = (bin_id + 1) % get_n_device();
       if (--i < 0) {
         full = true;
@@ -60,6 +60,8 @@ public:
   void Release(int bin_id, int n_threads) override {
     auto iter = available_threads_by_ball_id_.find(bin_id);
     if (iter != available_threads_by_ball_id_.end()) {
+      std::cout << "Release " << n_threads << " threads for bin " << bin_id
+                << std::endl;
       iter->second += n_threads;
     }
   }
@@ -74,6 +76,7 @@ public:
   int GetAvailableThreads(int bin_id = 0) {
     auto iter = available_threads_by_ball_id_.find(bin_id);
     if (iter != available_threads_by_ball_id_.end()) {
+      std::cout << iter->second << std::endl;
       return iter->second;
     }
     return 0;

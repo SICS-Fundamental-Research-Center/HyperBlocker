@@ -60,6 +60,7 @@ __device__ float lev_jaro_ratio(const char *term_l, const char *term_r,
     for (int i = 0; term_r[i]; i++)
       len_r++;
 
+  float result = 0;
   float md;
   if (len_r == 0 || len_l == 0) {
     if (len_l == 0 && len_r == 0)
@@ -78,16 +79,16 @@ __device__ float lev_jaro_ratio(const char *term_l, const char *term_r,
   }
 
   halflen = (len_l + 1) / 2;
-  size_t *idx = (size_t *)malloc(sizeof(size_t) * len_l);
-  memset(idx, 0, sizeof(size_t) * len_l);
-  float result = 0;
-  if (!idx)
-    result = -1.0;
+  size_t idx[256] = {0};
+  //size_t *idx = new size_t[len_l]();
 
   match = 0;
 
   for (i = 0; i < halflen; i++) {
     for (j = 0; j <= i + halflen; j++) {
+      if (j > 256)
+        break;
+
       if (term_l[j] == term_r[i] && !idx[j]) {
         match++;
         idx[j] = match;
@@ -99,6 +100,8 @@ __device__ float lev_jaro_ratio(const char *term_l, const char *term_r,
 
   for (i = halflen; i < to; i++) {
     for (j = i - halflen; j < len_l; j++) {
+      if (j > 256)
+        break;
       if (term_l[j] == term_r[i] && !idx[j]) {
         match++;
         idx[j] = match;
@@ -113,6 +116,8 @@ __device__ float lev_jaro_ratio(const char *term_l, const char *term_r,
     i = 0;
     trans = 0;
     for (j = 0; j < len_l; j++) {
+      if (j > 256)
+        break;
       if (idx[j]) {
         i++;
         if (idx[j] != i)
@@ -122,7 +127,7 @@ __device__ float lev_jaro_ratio(const char *term_l, const char *term_r,
     md = (float)match;
     result = (md / len_l + md / len_r + 1.0) / 3.0;
   }
-  free(idx);
+  //delete idx;
   return result;
 }
 
@@ -205,7 +210,7 @@ __host__ float host_lev_jaro_ratio(const char *term_l, const char *term_r,
 __device__ double lev_jaro_winkler_ratio(const char *string1,
                                          const char *string2,
                                          double pfweight = 0.1) {
-  double j;
+  double j = 0;
   size_t p, m;
 
   size_t len1 = 0, len2 = 0;
@@ -213,15 +218,6 @@ __device__ double lev_jaro_winkler_ratio(const char *string1,
     len1++;
   for (int i = 0; string2[i]; i++)
     len2++;
-  if (len1 == len2) {
-    size_t count = 0;
-    for (size_t i = 0; i < len1; i++) {
-      if (*(string1 + i) == *(string2 + i))
-        ++count;
-    }
-    if (count == len1)
-      return 1.0;
-  }
 
   j = lev_jaro_ratio(string1, string2, len1, len2);
 
