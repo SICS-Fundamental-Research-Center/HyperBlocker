@@ -1,7 +1,7 @@
 # HyperBlocker overview
 
 ## What is HyperBlocker?
-HyperBlocker is a GPU-accelerated system for blocking in ER. 
+HyperBlocker is a GPU-accelerated system for blocking in Entity Resolution (ER). 
 As opposed to previous blocking
 algorithms and parallel blocking solvers, HyperBlocker employs
 a pipelined architecture to overlap data transfer and GPU
