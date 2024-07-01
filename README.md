@@ -12,6 +12,8 @@ blocking. Moreover, it develops a variety of hardware-aware optimization
 and scheduling strategies to achieve massive parallelism
 and workload balancing across multiple GPUs. 
 
+PDF of the full version paper can be downloaded [here](https://hsiaoko.github.io/files/paper/HyperBlocker_full_paper.pdf).
+
 ## Features
 HyperBlocker has the following unique features.
 
@@ -39,8 +41,6 @@ multi-GPU scenarios, since tens of thousands of threads will
 compete for limited GPU resources. HyperBlocker provides an
 effective task-scheduling strategy to scale with multiple GPUs.
 
-## Publication
-PDF of the paper can be downloaded [here](https://hsiaoko.github.io/files/paper/HyperBlocker_full_paper.pdf).
 
 ## Getting Started
 ### Dependencies
