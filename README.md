@@ -82,10 +82,42 @@ $make
 ### Running HyperBlocker
 ```shell
 $cd $SRC_DIR
-$../bin/run_sys_exec -data_l [csv file path] -data_r [csv file path]  -rule_dir [rule path] -n_partitions [the number of partitions] -o [output path]
+$../bin/run_hyperblocker_exec -data_l [csv file path] -data_r [csv file path]  -rule_dir [rule path] -n_partitions [the number of partitions] -o [output path]
 ```
 
+### Representation of Rules
 
+A rule is organized in a YAML file consisting of Preconditions and Conseq nodes.
+
+Below is an example of a rule for the DBLP-ACM dataset. 
+It states that if there are tuples  $t$ and $s$ that share the same "year" and have similar "title" and "author," they are potentially a match.
+
+```
+Preconditions:
+  # There are two relation tables, tableA and tableB, each with 5 columns ranging from 0-4, representing id, title, author, venue, and year, respectively.
+  Relations:
+    - [0, 0, 1, 2, 3, 4]  
+    - [1, 0, 1, 2, 3, 4]
+  # The equality predicate is on the 4th column of tableA and tableB.
+  Equalities:
+    - [0, 1, 4, 4]
+  # There are two similarity measure predicates: the first evaluates column 1 of tableA and tableB, and the second evaluates column 2.
+  Sim:
+    - [0, 1, 1, 1, 2, 2]
+  # The thresholds for similarity measures: 0.89 for the 1st similarity predicate, 0.85 for the 2nd similarity predicate.
+  Threshold:
+    - [0, 1, 0.89, 0.85]  
+Conseq:
+  Option:
+    Equality
+  # The ID is in the 0th column.
+  Equality:
+    [0, 1, 0, 0]  
+```
+A YAML file corresponds to a single rule.
+
+HyperBlocker supports multiple rules. 
+To use multiple rules, you can easily put the YAML files into a directory and use the command -rule_dir "path".
 ## Contact Us
 For bugs, please raise an issue on GiHub. 
 Questions and comments are also welcome at my email: 
