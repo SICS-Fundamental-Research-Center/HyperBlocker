@@ -40,8 +40,7 @@ compete for limited GPU resources. HyperBlocker provides an
 effective task-scheduling strategy to scale with multiple GPUs.
 
 ## Publication
-PDF of the paper can be downloaded here:
-[HyperBlocker full paper](https://hsiaoko.github.io/files/paper/HyperBlocker_full_paper.pdf)
+PDF of the paper can be downloaded [here](https://hsiaoko.github.io/files/paper/HyperBlocker_full_paper.pdf).
 
 ## Getting Started
 ### Dependencies
