@@ -9,12 +9,11 @@ def fun(result_path, perfect_match_path):
     perfect_match = pd.read_csv(perfect_match_path, index_col=False, encoding='utf-8', sep=',', header=None)
 
     print(result)
-    #result = result.drop_duplicates(subset=[0, 1], keep='first')
-    result = result.drop_duplicates( keep='first')
-    perfect_match = perfect_match.drop_duplicates( keep='first')
-    print(result)
+    # result = result.drop_duplicates(subset=[0, 1], keep='first')
+    result = result.drop_duplicates(keep='first')
+    perfect_match = perfect_match.drop_duplicates(keep='first')
     print(perfect_match)
-    #result.to_csv(result_path + 'no_duplicate.csv', index=False, header=None, encoding='utf-8')
+    # result.to_csv(result_path + 'no_duplicate.csv', index=False, header=None, encoding='utf-8')
 
     count = 0;
     mismatch = pd.DataFrame(columns=['id1', 'id2'])
@@ -29,12 +28,11 @@ def fun(result_path, perfect_match_path):
         else:
             mismatch = mismatch.append({'id1': row[0], 'id2': row[1]}, ignore_index=True)
 
+    print("mismatch")
     print(mismatch)
-
 
     TP = count
     FP = len(result) - count
-
 
     print("TP", count, " FP", FP)
 
@@ -50,19 +48,15 @@ def fun(result_path, perfect_match_path):
     print("self prec: ", precision, "recall: ", recall, "f1: ", f1)
 
 
-
 def verify(result_path, data_path_l, data_path_r, output_path):
-
-    data_l = pd.read_csv(data_path_l, index_col=False, encoding='utf-8',sep=',')
+    data_l = pd.read_csv(data_path_l, index_col=False, encoding='utf-8', sep=',')
     data_r = pd.read_csv(data_path_r, index_col=False, encoding='utf-8', sep=',')
 
-
     result = pd.read_csv(result_path, index_col=False, encoding="utf-8", header=None)
-    result = result.drop_duplicates( keep='first')
+    result = result.drop_duplicates(keep='first')
     print(result)
 
     bm = BitMap(16777216)
-
 
     perfect_match = pd.DataFrame(columns=['id1', 'id2'])
     missed_match = pd.DataFrame(columns=['id1', 'id2'])
@@ -72,28 +66,25 @@ def verify(result_path, data_path_l, data_path_r, output_path):
 
     data_count = 0
     for index, row in data_r.iterrows():
-        if(bm.test(row[0])):
+        if (bm.test(row[0])):
             data_count = data_count + 1
-            #perfect_match = perfect_match.append({'id1': row[0], 'id2': row[0]}, ignore_index=True)
+            # perfect_match = perfect_match.append({'id1': row[0], 'id2': row[0]}, ignore_index=True)
 
     TP = 0
     for index, row in result.iterrows():
-        if(row[0]==row[1]):
+        if (row[0] == row[1]):
             TP = TP + 1
 
     for index, row in perfect_match.iterrows():
         result_to_be_check = result.loc[result[0] == row[0]]
         final = result_to_be_check.loc[result_to_be_check[1] == row[1]]
-        if(len(final)==0):
+        if (len(final) == 0):
             missed_match = missed_match.append({'id1': row[0], 'id2': row[1]}, ignore_index=True)
             break
 
-
-
-    #print(perfect_match)
+    # print(perfect_match)
     print(TP)
     print(data_count)
-
 
     print("missed")
     print(missed_match)
@@ -105,7 +96,27 @@ def verify(result_path, data_path_l, data_path_r, output_path):
     print("self prec: ", precision, "recall: ", recall, "f1: ", f1)
 
 
-if __name__ == '__main__':
-    #fun(sys.argv[1], sys.argv[2])
-    verify(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+def GenerateMatches(data_path_l, data_path_r, output_path):
+    data_l = pd.read_csv(data_path_l, index_col=False, encoding='utf-8', sep=',')
+    data_r = pd.read_csv(data_path_r, index_col=False, encoding='utf-8', sep=',')
 
+    print(data_l)
+    print(data_r)
+    bm = BitMap(16777216)
+    perfect_match = pd.DataFrame(columns=['ltable_id', 'rtable_id'])
+    for index, row in data_l.iterrows():
+        bm.set(row[0])
+
+    for index, row in data_r.iterrows():
+        if (bm.test(row[0])):
+            perfect_match = perfect_match.append({'ltable_id': row[0], 'rtable_id': row[0]}, ignore_index=True)
+
+    print(perfect_match)
+    perfect_match.to_csv(output_path, index=False, encoding="utf-8")
+    return
+
+
+if __name__ == '__main__':
+    fun(sys.argv[1], sys.argv[2])
+    # verify(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    # GenerateMatches(sys.argv[1], sys.argv[2], sys.argv[3])

@@ -93,3 +93,13 @@ if __name__ == '__main__':
 
     plt.legend(loc='lower right', ncol=2, fontsize=10)
     plt.show()
+
+
+def compute_ndcg():
+    from sklearn.metrics import ndcg_score
+    true_relevance = np.asarray([[10, 0, 0, 1, 5]])
+    scores = np.asarray([[.1, .2, .3, 4, 70]])
+    ndcg = ndcg_score(true_relevance, scores)
+    print(ndcg)
+
+compute_ndcg()
