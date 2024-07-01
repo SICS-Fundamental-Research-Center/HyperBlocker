@@ -26,7 +26,7 @@ public:
   DataMngr(const std::string &data_path, const std::string &sep = ",",
            bool read_header = false) {
 
-    rapidcsv::Document doc(data_path, rapidcsv::LabelParams(0, -1));
+    rapidcsv::Document doc(data_path, rapidcsv::LabelParams(-1, -1));
 
     auto n_rows = doc.GetRowCount();
     auto n_cols = doc.GetColumnCount();
@@ -54,6 +54,12 @@ public:
     auto n_cols_l = doc_l.GetColumnCount();
     auto n_rows_r = doc_r.GetRowCount();
     auto n_cols_r = doc_r.GetColumnCount();
+
+    std::cout << "- Read CSV" << std::endl;
+    std::cout << "  n_rows_l: " << n_rows_l << std::endl;
+    std::cout << "  n_cols_l: " << n_cols_l << std::endl;
+    std::cout << "  n_rows_r: " << n_rows_r << std::endl;
+    std::cout << "  n_cols_r: " << n_cols_r << std::endl;
 
     std::vector<std::vector<std::string>> cols_l;
     cols_l.reserve(n_cols_l);
@@ -104,6 +110,9 @@ public:
              j++) {
           if (serialized_ep.pred_type[j] == EQUALITIES) {
             auto pred_index = serialized_ep.pred_index[j];
+            std::cout << pred_index << std::endl;
+            std::cout << serializable_table.get_cols()[pred_index][i]
+                      << std::endl;
             bucket_id = (std::hash<std::string>{}(
                              serializable_table.get_cols()[pred_index][i]) +
                          std::hash<int>{}(bucket_id)) %
@@ -164,7 +173,7 @@ public:
           if (cols_l[prefix_hash_predicate_index][i].length() > 2) {
             auto two_d_bucket_id =
                 (std::hash<std::string>{}(
-                     cols_l[prefix_hash_predicate_index][i].substr(2)) +
+                     cols_l[prefix_hash_predicate_index][i].substr(0, 1)) +
                  std::hash<int>{}(bucket_id)) %
                 (n_partitions);
             bucket_id = (bucket_id + two_d_bucket_id) % n_partitions;
@@ -194,7 +203,7 @@ public:
           if (cols_r[prefix_hash_predicate_index][i].length() > 2) {
             auto two_d_bucket_id =
                 (std::hash<std::string>{}(
-                     cols_r[prefix_hash_predicate_index][i].substr(2)) +
+                     cols_r[prefix_hash_predicate_index][i].substr(0, 1)) +
                  std::hash<int>{}(bucket_id)) %
                 (n_partitions);
             bucket_id = (bucket_id + two_d_bucket_id) % n_partitions;
@@ -207,12 +216,26 @@ public:
       });
 
       for (size_t i = 0; i < n_partitions; i++) {
+        if (bucket_r[i][0].size() == 0 || bucket_l[i][0].size() == 0)
+          continue;
+
         serializable_table_vec_l_.push_back(SerializableTable(bucket_l[i]));
         serializable_table_vec_r_.push_back(SerializableTable(bucket_r[i]));
       }
     }
 
+    //SortTablesByNTuples();
+    std::cout << "Actual number of partitions: "
+              << serializable_table_vec_l_.size() << std::endl;
     is_complete_ = true;
+  }
+
+  void SortTablesByNTuples() {
+    std::sort(serializable_table_vec_l_.begin(),
+              serializable_table_vec_l_.end(),
+              [](const SerializableTable &a, const SerializableTable &b) {
+                return a.get_n_rows() < b.get_n_rows();
+              });
   }
 
   std::pair<SerializedTable, SerializedTable> GetPartition(size_t i) {

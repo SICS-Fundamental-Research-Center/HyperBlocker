@@ -26,9 +26,6 @@ public:
     return 0;
   }
 
-  void Release(int bin_id, int n_threads) override {}
-  void Consume(int bin_id, int n_threads) override {}
-
 private:
   Bitmap bitmap_;
 };

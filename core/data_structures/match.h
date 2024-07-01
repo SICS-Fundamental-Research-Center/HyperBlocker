@@ -13,7 +13,7 @@ class Match {
 public:
   Match() { p_mtx_ = new std::mutex(); }
 
-  void SetColSize(int  col_size_l, int col_size_r){
+  void SetColSize(int col_size_l, int col_size_r) {
     col_size_l_ = col_size_l;
     col_size_r_ = col_size_r;
   }
@@ -46,6 +46,15 @@ public:
       return iter->second;
     } else {
       return nullptr;
+    }
+  }
+
+  void Evict(int ball_id) {
+    std::cout << "Evist" << std::endl;
+    const std::lock_guard<std::mutex> lock(*p_mtx_);
+    auto iter = candidates_char_map_.find(ball_id);
+    if (iter != candidates_char_map_.end()) {
+      cudaFree(iter->second);
     }
   }
 

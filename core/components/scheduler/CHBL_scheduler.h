@@ -15,26 +15,17 @@ namespace scheduler {
 class CHBLScheduler : public Scheduler {
 public:
   CHBLScheduler(int n_device) : Scheduler(n_device) {
-    cudaError_t cudaStatus;
-    int dev = 0;
-    cudaDeviceProp devProp;
-    cudaStatus = cudaGetDeviceCount(&dev);
-    printf("error %d\n", cudaStatus);
-    for (int i = 0; i < dev; i++) {
-      cudaGetDeviceProperties(&devProp, i);
-      available_threads_by_ball_id_.insert(
-          std::make_pair(i, devProp.multiProcessorCount *
-                                devProp.maxThreadsPerMultiProcessor));
-    }
     std::cout << "Scheduler: CHBL." << std::endl;
   }
+
+  ~CHBLScheduler() { std::cout << "Deconstruct: CHBL" << std::endl; }
 
   int GetBinID(int ball_id = 0) override {
     auto bin_id = Hash(ball_id) % get_n_device();
 
     int i = get_n_device();
     bool full = false;
-    while (GetAvailableThreads(bin_id) < -1 * 256 * 1024 * 72) {
+    while (GetAvailableThreads(bin_id) < 0) {
       bin_id = (bin_id + 1) % get_n_device();
       if (--i < 0) {
         full = true;
@@ -53,30 +44,14 @@ public:
       }
     }
 
-    set_bin_id_by_ball_id(ball_id, bin_id);
+    this->set_bin_id_by_ball_id(ball_id, bin_id);
     return bin_id;
-  }
-
-  void Release(int bin_id, int n_threads) override {
-    auto iter = available_threads_by_ball_id_.find(bin_id);
-    if (iter != available_threads_by_ball_id_.end()) {
-      std::cout << "Release " << n_threads << " threads for bin " << bin_id
-                << std::endl;
-      iter->second += n_threads;
-    }
-  }
-
-  void Consume(int bin_id, int n_threads) override {
-    auto iter = available_threads_by_ball_id_.find(bin_id);
-    if (iter != available_threads_by_ball_id_.end()) {
-      iter->second -= n_threads;
-    }
   }
 
   int GetAvailableThreads(int bin_id = 0) {
     auto iter = available_threads_by_ball_id_.find(bin_id);
     if (iter != available_threads_by_ball_id_.end()) {
-      std::cout << iter->second << std::endl;
+      // std::cout << iter->second << std::endl;
       return iter->second;
     }
     return 0;
@@ -88,8 +63,6 @@ private:
     unsigned int hash = (key * seed) >> 3;
     return (hash & 0x7FFFFFFF) % get_n_device();
   }
-
-  std::unordered_map<int, int> available_threads_by_ball_id_;
 };
 
 } // namespace scheduler

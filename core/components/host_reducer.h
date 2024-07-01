@@ -27,6 +27,8 @@ public:
         p_hr_start_lck_(p_hr_start_lck), p_hr_start_cv_(p_hr_start_cv),
         scheduler_(scheduler), p_hr_terminable_(p_hr_terminable) {}
 
+  ~HostReducer() = default;
+
   void Run() {
     p_hr_start_cv_->wait(*p_hr_start_lck_,
                          [&] { return p_streams_->size() > 0; });
@@ -34,37 +36,35 @@ public:
     auto start_time = std::chrono::system_clock::now();
     std::cout << "Host Reducer running" << std::endl;
 
-    size_t count = 0;
     while (true) {
       if (*p_hr_terminable_ && p_streams_->size() == 0)
         break;
       for (auto iter = p_streams_->begin(); iter != p_streams_->end();) {
-        sleep(0.4);
         auto cudaStatus = cudaStreamQuery(*iter->second);
         if (cudaStatus == cudaSuccess) {
-          // cudaStreamSynchronize(*iter->second);
+          cudaStreamSynchronize(*iter->second);
           std::cout << "Ball id " << iter->first << "/" << p_streams_->size()
                     << " output: "
                     << p_match_->GetNCandidatesbyBallID(iter->first)
                     << std::endl;
           auto bin_id = scheduler_->get_bin_id_by_ball_id(iter->first);
-          scheduler_->Release(bin_id, 256 * 1024);
+          scheduler_->Release(iter->first, bin_id);
           WriteMatch(p_match_->GetNCandidatesbyBallID(iter->first),
                      p_match_->GetCandidatesBasePtr(iter->first));
           std::lock_guard<std::mutex> lock(*p_streams_mtx_);
           cudaStreamDestroy(*iter->second);
           iter = p_streams_->erase(iter);
+          //p_match_->Evict(iter->first);
         } else if (cudaStatus == cudaErrorIllegalAddress) {
           std::cout << cudaGetErrorString(cudaStatus) << std::endl;
         } else if (cudaStatus == cudaErrorNotReady) {
           std::lock_guard<std::mutex> lock(*p_streams_mtx_);
           ++iter;
-        }else {
+        } else {
           std::cout << cudaGetErrorString(cudaStatus) << std::endl;
         }
       }
     }
-    std::cout << "Host Reducer finished" << std::endl;
   }
 
 private:

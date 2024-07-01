@@ -28,6 +28,35 @@ struct SerializedExecutionPlan {
   int *pred_index;
   char *pred_type;
   float *pred_threshold;
+
+  bool VerifyPred(int origin_idx, int new_idx, const char new_type,
+                  float new_threshold) {
+    pred_index[origin_idx * 2 + 1] = new_idx;
+    pred_index[origin_idx * 2] = new_idx;
+    pred_type[origin_idx * 2 + 1] = new_type;
+    pred_type[origin_idx * 2] = new_type;
+    pred_threshold[origin_idx * 2 + 1] = new_threshold;
+    pred_threshold[origin_idx * 2] = new_threshold;
+  }
+
+  void Print() const {
+    std::cout << "SerializedExecutionPlan - n_rules: " << n_rules
+              << " length: " << length << std::endl;
+    std::cout << "  pred_index: ";
+
+    for (int i = 0; i < length; i++) {
+      std::cout << " " << pred_index[i];
+    }
+    std::cout << "\n  type: ";
+    for (int i = 0; i < length; i++) {
+      std::cout << " " << pred_type[i];
+    }
+    std::cout << "\n  threshold: ";
+    for (int i = 0; i < length; i++) {
+      std::cout << " " << pred_threshold[i];
+    }
+    std::cout << std::endl;
+  }
 };
 
 class ExecutionPlanGenerator {
@@ -45,7 +74,8 @@ public:
     }
     std::sort(rule_vec_.begin(), rule_vec_.end(),
               [](const auto &rule1, const auto &rule2) {
-                return rule1.pre.eq.size() < rule2.pre.eq.size();
+                return rule1.pre.eq.size() > rule2.pre.eq.size();
+                //return rule1.pre.sim.size() > rule2.pre.sim.size();
               });
     for (auto &iter : rule_vec_)
       iter.Show();

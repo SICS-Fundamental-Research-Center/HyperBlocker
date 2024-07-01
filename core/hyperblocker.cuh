@@ -2,6 +2,7 @@
 #define HYPERBLOCKER_CORE_HYPER_BLOCKER_CUH_
 
 #include <condition_variable>
+#include <ctime>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <experimental/filesystem>
@@ -111,7 +112,7 @@ public:
 
     auto start_time = std::chrono::system_clock::now();
 
-    ShowDeviceProperties();
+    // ShowDeviceProperties();
     HostProducer hp(n_partitions_, data_mngr_.get(), epg_.get(),
                     scheduler_.get(), streams_.get(), p_streams_mtx_.get(),
                     p_match_.get(), p_hr_start_lck_.get(), p_hr_start_cv_.get(),
@@ -122,6 +123,7 @@ public:
 
     std::thread hp_thread(&HostProducer::Run, &hp);
     std::thread hr_thread(&HostReducer::Run, &hr);
+    auto prepare_end_time = std::chrono::system_clock::now();
 
     hp_thread.join();
     hr_thread.join();
@@ -157,24 +159,20 @@ public:
                 << devProp.maxThreadsPerMultiProcessor << std::endl;
       std::cout << std::endl;
     }
-    n_device_ = dev;
+    std::cout << "n_device_: " << n_device_ << std::endl;
   }
 
   void Init() {
     cudaError_t cudaStatus;
-    std::cout << "Device properties" << std::endl;
     int dev = 0;
-    cudaDeviceProp devProp;
     cudaStatus = cudaGetDeviceCount(&dev);
-    printf("error %d\n", cudaStatus);
-
     n_device_ = dev;
   }
 
   std::vector<Rule> rule_vec_;
 
 private:
-  int n_device_ = 0;
+  int n_device_ = 1;
 
   const std::string rule_dir_;
   const std::string data_path_l_;

@@ -52,7 +52,7 @@ if (TEST)
 endif ()
 
 # gflags
-add_subdirectory("${THIRD_PARTY_ROOT}/gflags" EXCLUDE_FROM_ALL)
+find_package(gflags CONFIG REQUIRED)
 include_directories(SYSTEM ${GFLAGS_INCLUDE_DIR})
 
 # find TBB
@@ -70,16 +70,20 @@ include_directories(SYSTEM ${THIRD_PARTY_ROOT}/yaml-cpp/include/)
 include_directories(SYSTEM ${THIRD_PARTY_ROOT}/rapidcsv/src)
 
 # find CUDA
-find_package(CUDA REQUIRED)
-set(CUDA_SOURCE_PROPERTY_FORMAT OBJ)
-set(CUDA_SEPARABLE_COMPILATION ON)
-include_directories(${CUDA_INCLUDE_DIRS})
-set(CUDA_PROPAGATE_HOST_FLAGS OFF)
-set(CUDA_NVCC_FLAGS -O3;-G;-g)
-if(NOT DEFINED CMAKE_CUDA_STANDARD)
-    set(CMAKE_CUDA_STANDARD 11)
-    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-endif()
+#find_package(CUDA REQUIRED)
+#set(CUDA_SOURCE_PROPERTY_FORMAT OBJ)
+#set(CUDA_SEPARABLE_COMPILATION ON)
+#include_directories(${CUDA_INCLUDE_DIRS})
+#set(CUDA_PROPAGATE_HOST_FLAGS OFF)
+#set(CUDA_NVCC_FLAGS -O3;-G;-g)
+#if(NOT DEFINED CMAKE_CUDA_STANDARD)
+#    set(CMAKE_CUDA_STANDARD 11)
+#    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+#endif()
+
+# folly
+find_package(FOLLY REQUIRED)
+include_directories(SYSTEM ${FOLLY_INCLUDE_DIR})
 
 #######################
 # Artifacts
