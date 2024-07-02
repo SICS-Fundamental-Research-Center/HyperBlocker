@@ -55,12 +55,6 @@ public:
     auto n_rows_r = doc_r.GetRowCount();
     auto n_cols_r = doc_r.GetColumnCount();
 
-    std::cout << "- Read CSV" << std::endl;
-    std::cout << "  n_rows_l: " << n_rows_l << std::endl;
-    std::cout << "  n_cols_l: " << n_cols_l << std::endl;
-    std::cout << "  n_rows_r: " << n_rows_r << std::endl;
-    std::cout << "  n_cols_r: " << n_cols_r << std::endl;
-
     std::vector<std::vector<std::string>> cols_l;
     cols_l.reserve(n_cols_l);
 
@@ -110,9 +104,6 @@ public:
              j++) {
           if (serialized_ep.pred_type[j] == EQUALITIES) {
             auto pred_index = serialized_ep.pred_index[j];
-            std::cout << pred_index << std::endl;
-            std::cout << serializable_table.get_cols()[pred_index][i]
-                      << std::endl;
             bucket_id = (std::hash<std::string>{}(
                              serializable_table.get_cols()[pred_index][i]) +
                          std::hash<int>{}(bucket_id)) %
@@ -269,4 +260,5 @@ private:
 } // namespace core
 } // namespace hyperblocker
 } // namespace sics
+
 #endif // HYPERBLOCKER_CORE_COMPONENTS_DATA_MNGR_H_

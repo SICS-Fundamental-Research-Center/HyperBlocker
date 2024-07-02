@@ -22,7 +22,7 @@ message(STATUS "Using compiler: ${CMAKE_CXX_COMPILER} - ${CMAKE_CXX_COMPILER_VER
 set(PROJECT_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(THIRD_PARTY_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_ROOT_DIR}/bin)
-set(LIBRARY_OUTPUT_PATH  ${PROJECT_ROOT_DIR}/lib)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_ROOT_DIR}/lib)
 set(CMAKE_MODULE_PATH ${PROJECT_ROOT_DIR}/cmake)
 set(LIBRARY_ROOT_DIR ${PROJECT_ROOT_DIR}/lib)
 
@@ -55,35 +55,12 @@ endif ()
 find_package(gflags CONFIG REQUIRED)
 include_directories(SYSTEM ${GFLAGS_INCLUDE_DIR})
 
-# find TBB
-find_package(TBB)
-if (TBB_FOUND)
-    message(STATUS "TBB found")
-    add_compile_definitions(TBB_FOUND)
-endif ()
-
 # yaml
 add_subdirectory("${THIRD_PARTY_ROOT}/yaml-cpp" EXCLUDE_FROM_ALL)
 include_directories(SYSTEM ${THIRD_PARTY_ROOT}/yaml-cpp/include/)
 
 # rapidcsv
 include_directories(SYSTEM ${THIRD_PARTY_ROOT}/rapidcsv/src)
-
-# find CUDA
-#find_package(CUDA REQUIRED)
-#set(CUDA_SOURCE_PROPERTY_FORMAT OBJ)
-#set(CUDA_SEPARABLE_COMPILATION ON)
-#include_directories(${CUDA_INCLUDE_DIRS})
-#set(CUDA_PROPAGATE_HOST_FLAGS OFF)
-#set(CUDA_NVCC_FLAGS -O3;-G;-g)
-#if(NOT DEFINED CMAKE_CUDA_STANDARD)
-#    set(CMAKE_CUDA_STANDARD 11)
-#    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-#endif()
-
-# folly
-find_package(FOLLY REQUIRED)
-include_directories(SYSTEM ${FOLLY_INCLUDE_DIR})
 
 #######################
 # Artifacts

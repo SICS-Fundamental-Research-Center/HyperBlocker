@@ -62,14 +62,7 @@ public:
     memset(min_length_per_col_, 1, sizeof(unsigned) * n_cols_);
 
     Serialize2PinnedMemory();
-    PrintStatistics();
   }
-
-  //~SerializableTable() {
-  //  delete[] max_length_per_col_;
-  //  delete[] min_length_per_col_;
-  //  delete[] avg_length_per_col_;
-  //}
 
   void PrintStatistics() const {
     for (size_t i = 0; i < n_cols_; i++) {
@@ -85,10 +78,6 @@ public:
 
     serialized_table_.n_cols_ = n_cols_;
     serialized_table_.n_rows_ = n_rows_;
-
-    // First traversal to get the max length of the strings.
-    // serialized_table_.col_size_ = new size_t[n_cols_]();
-    // serialized_table_.col_offset_ = new size_t[n_cols_]();
 
     cudaHostAlloc(&(serialized_table_.col_size_), sizeof(size_t) * n_cols_,
                   cudaHostAllocPortable);
@@ -171,4 +160,5 @@ private:
 } // namespace core
 } // namespace hyperblocker
 } // namespace sics
+
 #endif // HYPERBLOCKER_CORE_DATA_STRUCTURES_TABLE_H_

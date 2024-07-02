@@ -201,6 +201,7 @@ public:
         h_tb_l.get_aligned_tuple_size(), h_tb_r.get_aligned_tuple_size(),
         d_tb_data_l, d_tb_data_r, d_col_size_l, d_col_size_r, d_col_offset_l,
         d_col_offset_r, d_sep, d_result_offset, d_candidates_char);
+
     cudaMemcpyAsync(h_result_offset, d_result_offset, sizeof(int),
                     cudaMemcpyDeviceToHost, *p_stream);
     cudaMemcpyAsync(h_candidates_char, d_candidates_char,

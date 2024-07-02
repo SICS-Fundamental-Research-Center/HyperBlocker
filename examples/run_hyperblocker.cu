@@ -28,7 +28,7 @@ DEFINE_string(sep, ",", "separator to split a line of csv file.");
 DEFINE_string(scheduler, "CHBL", "scheduler type.");
 DEFINE_bool(read_header, false, "whether to read header of csv.");
 DEFINE_uint64(n_partitions, 1, "number of partitions.");
-DEFINE_uint64(prefix_hash_predicate_index, INT_MAX, "number of partitions.");
+DEFINE_uint64(prefix_hash_pred_idx, INT_MAX, "number of partitions.");
 
 using sics::hyperblocker::core::components::scheduler::kCHBL;
 using sics::hyperblocker::core::components::scheduler::kEvenSplit;
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
   auto scheduler_type = Scheduler2Enum(FLAGS_scheduler);
   sics::hyperblocker::core::HyperBlocker hb(
       FLAGS_rule_dir, FLAGS_data_l, FLAGS_data_r, FLAGS_o, FLAGS_n_partitions,
-      FLAGS_prefix_hash_predicate_index, FLAGS_sep, scheduler_type);
+      FLAGS_prefix_hash_pred_idx, FLAGS_sep, scheduler_type);
 
   hb.Run();
 

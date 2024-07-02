@@ -81,17 +81,9 @@ public:
       break;
     }
 
-    if (data_path_r_.empty()) {
-      std::cout << "DirtyER" << std::endl;
-      data_mngr_ =
-          std::make_unique<sics::hyperblocker::core::components::DataMngr>(
-              data_path_l_, sep, false);
-    } else {
-      std::cout << "CleanCleanER" << std::endl;
-      data_mngr_ =
-          std::make_unique<sics::hyperblocker::core::components::DataMngr>(
-              data_path_l_, data_path_r_, sep, false);
-    }
+    data_mngr_ =
+        std::make_unique<sics::hyperblocker::core::components::DataMngr>(
+            data_path_l_, data_path_r_, sep, false);
 
     p_match_ = std::make_unique<Match>();
 
