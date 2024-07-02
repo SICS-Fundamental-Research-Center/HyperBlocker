@@ -47,14 +47,11 @@ effective task-scheduling strategy to scale with multiple GPUs.
 HyperBlocker builds, runs, and has been tested on GNU/Linux. 
 At the minimum, HyperBlocker depends on the following software:
 * A modern C++ compiler compliant with the C++17 standard 
-(gcc >= 9)
-* CMake (>= 3.2)
+(gcc/g++ >= 12.2)
+* CMake (>= 3.28)
 * GoogleTest (>= 1.11.0)
 * RapidCSV (>= 8.65)
-* CUDA (>= 10.0)
-
-
-
+* nvcc (>= 12.4)
 
 ### Build
 
