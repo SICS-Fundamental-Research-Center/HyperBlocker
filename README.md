@@ -52,6 +52,7 @@ At the minimum, HyperBlocker depends on the following software:
 * GoogleTest (>= 1.11.0)
 * RapidCSV (>= 8.65)
 * nvcc (>= 12.4)
+* gflags (>= 2.2)
 
 ### Build
 
